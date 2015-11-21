@@ -1,3 +1,5 @@
 *.so
 *.class
 *.hprof
+hs_err_*.log
+tests
