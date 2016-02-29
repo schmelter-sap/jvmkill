@@ -3,3 +3,4 @@
 *.hprof
 hs_err_*.log
 tests
+tests.*

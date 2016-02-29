@@ -4,11 +4,13 @@ endif
 
 ifeq ($(shell uname -s),Darwin)
   INCLUDE= -I"$(JAVA_HOME)/include" -I"$(JAVA_HOME)/include/darwin"
+  LINK= -Wl,-install_name,libJvmKill
 else
   INCLUDE= -I"$(JAVA_HOME)/include" -I"$(JAVA_HOME)/include/linux"
+  LINK= -Wl,-soname=libJvmKill -static-libgcc
 endif
 
-CFLAGS=-Wall -Werror -fPIC -std=c++11 -shared -fno-strict-aliasing -Wl,-soname=libJvmKill -static-libgcc  -fno-omit-frame-pointer $(INCLUDE)
+CFLAGS=-Wall -Werror -fPIC -std=c++11 -shared -fno-strict-aliasing $(LINK) -fno-omit-frame-pointer $(INCLUDE)
 TARGET=libjvmkill.so
 
 .PHONY: all build clean alltests ctests threadtests threadtestbasic threadtest0 threadtest-10-2 memtests memtest0 memtest-10-2
@@ -17,7 +19,7 @@ all: build alltests
 
 build:	
 	@echo "=============================================="
-	g++ $(CFLAGS) -o $(TARGET) jvmkill.c
+	g++ $(CFLAGS) -o $(TARGET) jvmkill.c++
 	chmod 644 $(TARGET)
 
 clean:
