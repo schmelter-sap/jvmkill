@@ -19,7 +19,7 @@ all: build alltests
 
 build:	
 	@echo "=============================================="
-	g++ $(CFLAGS) -o $(TARGET) jvmkill.c++
+	g++ $(CFLAGS) -o $(TARGET) jvmkill.c++ threshold.c++ killaction.c++
 	chmod 644 $(TARGET)
 
 clean:
@@ -27,14 +27,23 @@ clean:
 	rm -f $(TARGET)
 	rm -f *.class
 	rm -f *.hprof
-	rm -f tests
+	rm -rf *.dSYM
+	rm -f *tests
 
 alltests: ctests threadtests memtests
 
-ctests: build
+ctests: build thresholdctests killactionctests
 	@echo "=============================================="
 	gcc -g -Wall -Werror $(INCLUDE) -ldl -o tests tests.c
 	./tests
+
+thresholdctests: build
+	g++ -g -Wall -Werror $(INCLUDE) -ldl -o thresholdtests thresholdtests.c++ threshold.c++
+	./thresholdtests
+
+killactionctests: build
+	g++ -g -Wall -Werror $(INCLUDE) -ldl -o killactiontests killactiontests.c++ killaction.c++
+	./killactiontests
 
 threadtests: threadtestbasic threadtest0 threadtest-10-2 threadtestpspawn-10-2
 

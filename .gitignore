@@ -4,3 +4,5 @@
 hs_err_*.log
 tests
 tests.*
+*tests
+*.dSYM

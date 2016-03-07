@@ -22,11 +22,8 @@
 
 /**
  * Configuration struct that holds agent configuration 
- * === time_threshold is expressed in seconds ===
  */
 struct Configuration {
-   int count_threshold;
-   int time_threshold; 
    int signal; 
 };
 #ifdef __cplusplus
