@@ -32,6 +32,24 @@ static void (*resourceExhaustedFn)(
 int sigQuit_sent = 0;
 int moddedSignal = SIGUSR1;
 
+static struct jvmtiInterface_1_ interface_1;
+static struct _jvmtiEnv _jvmtiEnvStub;
+static jvmtiEnv *jvmtiEnvStub;
+static int enterCount = 0;
+static int exitCount = 0;
+
+jvmtiError RawMonitorEnterStub(jvmtiEnv* env, 
+    jrawMonitorID monitor) {
+	enterCount++;
+	return JVMTI_ERROR_NONE;
+}
+
+jvmtiError RawMonitorExitStub(jvmtiEnv* env, 
+    jrawMonitorID monitor) {
+	exitCount++;
+	return JVMTI_ERROR_NONE;
+}
+
 void sig_handler(int signo) {
 	if (signo == moddedSignal)
 		sigQuit_sent = 1;
@@ -48,7 +66,13 @@ void* printDlError(void *handle) {
 
 //loads agent library and fetches external function handles
 void setup() {
-        handle = printDlError(dlopen("libjvmkill.so", RTLD_LAZY));
+	// Build JVMTI environment with stubbed monitor functions
+	interface_1.RawMonitorEnter = &RawMonitorEnterStub;
+	interface_1.RawMonitorExit = &RawMonitorExitStub;
+	_jvmtiEnvStub.functions = &interface_1;
+	jvmtiEnvStub = (jvmtiEnv *)&_jvmtiEnvStub;
+
+    handle = printDlError(dlopen("libjvmkill.so", RTLD_LAZY));
 	parameters = malloc(sizeof(char) * 1024);
 	if (signal(moddedSignal, sig_handler) == SIG_ERR)
         	exit(EXIT_FAILURE);
@@ -73,11 +97,16 @@ int testSendsSignalIfThresholdExceeded() {
 	sigQuit_sent=0;
 	snprintf(parameters, 1024, "%s", "time=3,count=2"); 
 	setParametersFn(parameters);
-	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
-	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
-	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
+	resourceExhaustedFn(jvmtiEnvStub,NULL,5,NULL,NULL);
+	if (enterCount != 1 || exitCount != 1) {
+       fprintf(stdout, "monitor was not driven correctly: FAILED\n");
+	   return 0;
+	}
+
+	resourceExhaustedFn(jvmtiEnvStub,NULL,5,NULL,NULL);
+	resourceExhaustedFn(jvmtiEnvStub,NULL,5,NULL,NULL);
 	if (!sigQuit_sent)
-           fprintf(stdout, "testSendsSignalIfThresholdExceeded FAILED\n");
+       fprintf(stdout, "testSendsSignalIfThresholdExceeded FAILED\n");
 	return sigQuit_sent;
 }
 
@@ -86,18 +115,18 @@ int testDoesntSendSignalIfThresholdNotExceeded() {
 	sigQuit_sent=0;
 	snprintf(parameters, 1024, "%s", "time=3,count=5");
 	setParametersFn(parameters);
-	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
-	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
-	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
-	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
-	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
+	resourceExhaustedFn(jvmtiEnvStub,NULL,5,NULL,NULL);
+	resourceExhaustedFn(jvmtiEnvStub,NULL,5,NULL,NULL);
+	resourceExhaustedFn(jvmtiEnvStub,NULL,5,NULL,NULL);
+	resourceExhaustedFn(jvmtiEnvStub,NULL,5,NULL,NULL);
+	resourceExhaustedFn(jvmtiEnvStub,NULL,5,NULL,NULL);
 	sleep(6); //waits for counter to "zero" 
-	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
-	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
-	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
-	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
+	resourceExhaustedFn(jvmtiEnvStub,NULL,5,NULL,NULL);
+	resourceExhaustedFn(jvmtiEnvStub,NULL,5,NULL,NULL);
+	resourceExhaustedFn(jvmtiEnvStub,NULL,5,NULL,NULL);
+	resourceExhaustedFn(jvmtiEnvStub,NULL,5,NULL,NULL);
 	if (sigQuit_sent)
-           fprintf(stdout, "testDoesntSendSignalIfThresholdNotExceeded FAILED\n");
+       fprintf(stdout, "testDoesntSendSignalIfThresholdNotExceeded FAILED\n");
 	return !sigQuit_sent;
 
 }

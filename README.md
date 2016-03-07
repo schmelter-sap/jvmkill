@@ -34,7 +34,7 @@ above may be added to the `JAVA_TOOL_OPTIONS` environment variable.
 
 # Agent parameters
 
-The agent configurations can be passed using the standard agent mechanism passing.
+The agent configurations can be passed using the standard agent mechanism.
 The parameters should be passed as a comma separated string. Eg.: count=2,time=10
 The agent accepts the following parameters:
 

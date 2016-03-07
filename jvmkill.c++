@@ -49,6 +49,7 @@ char *tokens[] = {
     [THE_END] = NULL
 };
 
+static jrawMonitorID monitorID;
 static long *events; 
 static int eventIndex = 0;
 static struct Configuration configuration;
@@ -56,11 +57,13 @@ static struct Configuration configuration;
 void setSignal(int signal) {
    configuration.signal = signal;
 }
+
 static long getTimeMillis() {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (ts.tv_sec*1000)+(ts.tv_nsec/1000000);
 }
+
 static long getMillisLimit() {
    return getTimeMillis()-configuration.time_threshold*1000;
 }
@@ -77,31 +80,48 @@ static int countEvents() {
    int count = 0;
    for (int i=0;i<configuration.count_threshold;i++) {
       if (events[i] != 0 && events[i]>=millisLimit) 
-	 count++;
+     	   count++;
    }
    return count;
 }
 
-void
-resourceExhausted(
+void resourceExhausted(
       jvmtiEnv *jvmti_env,
       JNIEnv *jni_env,
       jint flags,
       const void *reserved,
       const char *description) {
+   jvmtiError err;
+
+   err = jvmti_env->RawMonitorEnter(monitorID);
+   if (err != JVMTI_ERROR_NONE) {
+      fprintf(stderr, "ERROR: RawMonitorEnter failed: %d\n", err);
+      return;
+   }
 
    int eventCount = countEvents();
    fprintf(stderr, "ResourceExhausted! (%d/%d)\n", eventCount+1, configuration.count_threshold);
    //eventCount was already on threshold before adding the current one
    if (eventCount == configuration.count_threshold) {
         fprintf(stderr, "killing current process\n");
-   	kill(getpid(), configuration.signal);
+        kill(getpid(), configuration.signal);
    }
-   addEvent();
+   addEvent(); // FIXME: move up?
+
+   err = jvmti_env->RawMonitorExit(monitorID);
+   if (err != JVMTI_ERROR_NONE) {
+      fprintf(stderr, "ERROR: RawMonitorExit failed: %d\n", err);
+   }
 }
 
 int setCallbacks(jvmtiEnv *jvmti) {
    jvmtiError err;
+
+   err = jvmti->CreateRawMonitor("jvmkillMonitor", &monitorID);
+   if (err != JVMTI_ERROR_NONE) {
+      fprintf(stderr, "ERROR: CreateRawMonitor failed: %d\n", err);
+      return JNI_ERR;
+   }
 
    jvmtiEventCallbacks callbacks;
    memset(&callbacks, 0, sizeof(callbacks));
@@ -143,7 +163,7 @@ void setParameters(char *options) {
        return;
 
    subopts = options;
-   while (*subopts != '\0')
+   while (*subopts != '\0') {
       switch (getsubopt (&subopts, tokens, &value)) {
          case COUNT_OPT:
             if (value == NULL)
@@ -160,6 +180,7 @@ void setParameters(char *options) {
             fprintf (stderr, "Unknown suboption '%s'\n", value);
             break;
       }
+   }
    events = new long[configuration.count_threshold];
    //prefill with a safe value
    for (int i=0;i<configuration.count_threshold;i++) {
