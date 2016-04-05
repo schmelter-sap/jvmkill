@@ -1,0 +1,8 @@
+---
+platform: darwin
+
+inputs:
+- name: jvmkill
+
+run:
+  path: jvmkill/ci/build.sh
