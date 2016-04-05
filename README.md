@@ -27,7 +27,21 @@ motivated the development of this agent.
 
 Run Java with the agent added as a JVM argument:
 
-    -agentpath:/path/to/libjvmkill.so
+    -agentpath:/path/to/libjvmkill.so=<parameters>
 
 Alternatively, if modifying the Java command line is not possible, the
 above may be added to the `JAVA_TOOL_OPTIONS` environment variable.
+
+# Agent parameters
+
+The agent configurations can be passed using the standard agent mechanism.
+The parameters should be passed as a comma separated string. Eg.: count=2,time=10
+The agent accepts the following parameters:
+
+## count
+Configures the limit of resourceExhausted events that can be fired in the configured
+time interval. Defaults to 0 if not provided (JVM is killed with a single fired event).
+
+## time
+Configures the time limit (in seconds) in which resourceExhausted events are kept in 
+the counter. Defaults to 1 if not provided.
