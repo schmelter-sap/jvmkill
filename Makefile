@@ -7,10 +7,10 @@ ifeq ($(shell uname -s),Darwin)
   LINK= -Wl,-install_name,libJvmKill
 else
   INCLUDE= -I"$(JAVA_HOME)/include" -I"$(JAVA_HOME)/include/linux"
-  LINK= -Wl,-soname=libJvmKill -static-libgcc
+  LINK= -Wl,--no-as-needed,-soname=libJvmKill -static-libgcc
 endif
 
-CFLAGS=-Wall -Werror -fPIC -std=c++11 -shared -fno-strict-aliasing $(LINK) -fno-omit-frame-pointer $(INCLUDE)
+CPPFLAGS=-Wall -Werror -fPIC -std=c++11 -shared -fno-strict-aliasing $(LINK) -fno-omit-frame-pointer $(INCLUDE)
 TARGET=libjvmkill.so
 
 .PHONY: all build clean alltests ctests threadtests threadtestbasic threadtest0 threadtest-10-2 memtests memtest0 memtest-10-2
@@ -19,7 +19,7 @@ all: build alltests
 
 build:	
 	@echo "=============================================="
-	g++ $(CFLAGS) -o $(TARGET) jvmkill.c++ threshold.c++ killaction.c++
+	g++ $(CPPFLAGS) -o $(TARGET) jvmkill.c++ threshold.c++ killaction.c++
 	chmod 644 $(TARGET)
 
 clean:
@@ -34,7 +34,7 @@ alltests: ctests threadtests memtests
 
 ctests: build thresholdctests killactionctests
 	@echo "=============================================="
-	gcc -g -Wall -Werror $(INCLUDE) -ldl -o tests tests.c
+	gcc -g -Wall -Werror $(INCLUDE) -Wl,--no-as-needed -ldl -Wl,-rpath=/home/vagrant/jvmkill -o tests tests.c
 	./tests
 
 thresholdctests: build
@@ -80,7 +80,6 @@ memtest-10-2: build
 threadtestbasic: build
 	@echo "=============================================="
 	$(JAVA_HOME)/bin/javac JvmKillTest2.java
-	ulimit -u 
 	!($(JAVA_HOME)/bin/java \
 	    -agentpath:$(PWD)/$(TARGET) \
 	    -cp $(PWD) JvmKillTest2)
