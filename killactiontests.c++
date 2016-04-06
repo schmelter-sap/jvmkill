@@ -12,6 +12,7 @@
  * limitations under the License.
  */
 #include <dlfcn.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "action.h"
