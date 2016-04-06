@@ -16,7 +16,7 @@ import java.util.List;
 
 public final class JvmKillTest2
 {
-    private static final int MAXNUM = 20480;
+    private static final int MAXNUM = 204800;
 
     @SuppressWarnings("InfiniteLoopStatement")
     public static void main(String[] args)
