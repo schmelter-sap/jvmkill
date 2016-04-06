@@ -7,11 +7,10 @@ ifeq ($(shell uname -s),Darwin)
   LINK= -Wl,-install_name,libJvmKill
 else
   INCLUDE= -I"$(JAVA_HOME)/include" -I"$(JAVA_HOME)/include/linux"
-  LINK= -Wl,-soname=libJvmKill,--no-as-needed -static-libgcc
+  LINK= -Wl,-soname=libJvmKill -static-libgcc
 endif
 
-CFLAGS=-Wall -Werror -fPIC -shared -fno-strict-aliasing $(LINK) -fno-omit-frame-pointer $(INCLUDE)
-CPPFLAGS=-std=c++11 $(CFLAGS)
+CFLAGS=-Wall -Werror -fPIC -std=c++11 -shared -fno-strict-aliasing $(LINK) -fno-omit-frame-pointer $(INCLUDE)
 TARGET=libjvmkill.so
 
 .PHONY: all build clean alltests ctests threadtests threadtestbasic threadtest0 threadtest-10-2 memtests memtest0 memtest-10-2
@@ -20,7 +19,7 @@ all: build alltests
 
 build:	
 	@echo "=============================================="
-	g++ $(CPPFLAGS) -o $(TARGET) jvmkill.c++ threshold.c++ killaction.c++
+	g++ $(CFLAGS) -o $(TARGET) jvmkill.c++ threshold.c++ killaction.c++
 	chmod 644 $(TARGET)
 
 clean:
@@ -35,15 +34,15 @@ alltests: ctests threadtests memtests
 
 ctests: build thresholdctests killactionctests
 	@echo "=============================================="
-	gcc $(CFLAGS) -g $(INCLUDE) -ldl -o tests tests.c
+	gcc -g -Wall -Werror $(INCLUDE) -ldl -o tests tests.c
 	./tests
 
 thresholdctests: build
-	g++ $(CPPFLAGS) -g $(INCLUDE) -ldl -o thresholdtests thresholdtests.c++ threshold.c++
+	g++ -g -Wall -Werror $(INCLUDE) -ldl -o thresholdtests thresholdtests.c++ threshold.c++
 	./thresholdtests
 
 killactionctests: build
-	g++ $(CPPFLAGS) -g $(INCLUDE) -ldl -o killactiontests killactiontests.c++ killaction.c++
+	g++ -g -Wall -Werror $(INCLUDE) -ldl -o killactiontests killactiontests.c++ killaction.c++
 	./killactiontests
 
 threadtests: threadtestbasic threadtest0 threadtest-10-2 threadtestpspawn-10-2
