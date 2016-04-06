@@ -9,7 +9,7 @@ ifeq ($(shell uname -s),Darwin)
 else
   INCLUDE= -I"$(JAVA_HOME)/include" -I"$(JAVA_HOME)/include/linux"
   LINK= -Wl,--no-as-needed,-soname=libJvmKill -static-libgcc
-  ASNEEDED=-Wl,--no-as-needed -Wl,-rpath=/home/vagrant/jvmkill
+  ASNEEDED=-Wl,--no-as-needed -Wl,-rpath=$(PWD)
 endif
 
 CPPFLAGS=-Wall -Werror -fPIC -std=c++11 -shared -fno-strict-aliasing $(LINK) -fno-omit-frame-pointer $(INCLUDE)
