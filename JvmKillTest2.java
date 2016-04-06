@@ -16,7 +16,7 @@ import java.util.List;
 
 public final class JvmKillTest2
 {
-    private static final int MAXNUM = 2048;
+    private static final int MAXNUM = 20480;
 
     @SuppressWarnings("InfiniteLoopStatement")
     public static void main(String[] args)
@@ -32,7 +32,7 @@ public final class JvmKillTest2
                     @Override
                     public void run() {
                         try {
-                            Thread.sleep(1000);
+                            Thread.sleep(100000);
                         } catch (Exception e) {
                             System.err.println(this.name + " interrupted by exception " + e);
                         }

@@ -58,6 +58,7 @@ threadtest0: build
 
 threadtest-10-2: build
 	@echo "=============================================="
+	$(JAVA_HOME)/bin/javac JvmKillTestThreads.java
 	!($(JAVA_HOME)/bin/java -Xmx1m \
 	    -agentpath:$(PWD)/$(TARGET)=time=10,count=2 \
 	    -cp $(PWD) JvmKillTestThreads)
