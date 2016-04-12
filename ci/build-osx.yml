@@ -4,5 +4,8 @@ platform: darwin
 inputs:
 - name: jvmkill
 
+params:
+  JAVA_HOME: /Library/Java/JavaVirtualMachines/jdk1.8.0_77.jdk/Contents/Home
+
 run:
   path: jvmkill/ci/build.sh
