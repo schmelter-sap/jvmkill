@@ -21,7 +21,7 @@ all: build alltests
 
 build:
 	@echo "=============================================="
-	g++ $(CPPFLAGS) -o $(TARGET) jvmkill.c++ agentcontroller.c++ parametersparser.c++ threshold.c++ killaction.c++ base.c++ memory.c++ heaphistogramaction.c++
+	g++ $(CPPFLAGS) -o $(TARGET) jvmkill.c++ agentcontroller.c++ parametersparser.c++ threshold.c++ killaction.c++ heaphistogramaction.c++
 	chmod 644 $(TARGET)
 
 clean:

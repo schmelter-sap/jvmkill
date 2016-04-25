@@ -18,25 +18,40 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <iostream>
 
 #include "heaphistogramaction.h"
-#include "memory.h"
-#include "base.h"
+
+void printHistogram(jvmtiEnv *jvmti, std::ostream *outputStream) {
+	*outputStream << "Histogram goes here";
+}
 
 HeapHistogramAction::HeapHistogramAction(jvmtiEnv *jvm) {
 	jvmti=jvm;
 }
 
 void HeapHistogramAction::act() {
-	fprintf(stderr, "Printing Heap Histogram\n");
+	fprintf(stderr, "Printing Heap Histogram to standard output\n");
 	jvmtiCapabilities capabilities;
+
 	/* Get/Add JVMTI capabilities */
-	CHECK(jvmti->GetCapabilities(&capabilities));
+	int err = jvmti->GetCapabilities(&capabilities);
+    if (err != JVMTI_ERROR_NONE) {
+      fprintf(stderr, "ERROR: GetCapabilities failed: %d\n", err);
+      return;
+    }
 	capabilities.can_tag_objects = 1;
 	capabilities.can_generate_garbage_collection_events = 1;
 	capabilities.can_get_source_file_name = 1;
 	capabilities.can_get_line_numbers = 1;
 	capabilities.can_suspend = 1;
-	CHECK(jvmti->AddCapabilities(&capabilities));
-	printHistogram(jvmti, &(std::cout), true);
+	err = jvmti->AddCapabilities(&capabilities);
+	if (err != JVMTI_ERROR_NONE) {
+      fprintf(stderr, "ERROR: AddCapabilities failed: %d\n", err);
+      return;
+    }
+
+	printHistogram(jvmti, &(std::cout));
+	fprintf(stderr, "Printed Heap Histogram to standard output\n");
+
 }
