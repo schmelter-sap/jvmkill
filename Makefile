@@ -5,11 +5,9 @@ endif
 ifeq ($(shell uname -s),Darwin)
   INCLUDE= -I"$(JAVA_HOME)/include" -I"$(JAVA_HOME)/include/darwin"
   LINK= -Wl,-install_name,libJvmKill
-  ASNEEDED=
 else
   INCLUDE= -I"$(JAVA_HOME)/include" -I"$(JAVA_HOME)/include/linux"
   LINK= -Wl,--no-as-needed,-soname=libJvmKill -static-libgcc
-  ASNEEDED=-Wl,--no-as-needed -Wl,-rpath=$(PWD)
 endif
 
 CPPFLAGS=-Wall -Werror -fPIC -std=c++11 -shared -fno-strict-aliasing $(LINK) -fno-omit-frame-pointer $(INCLUDE)
@@ -34,16 +32,13 @@ clean:
 
 alltests: ctests threadtests memtests
 
-ctests: build thresholdctests killactionctests
-	@echo "=============================================="
-	gcc -g -Wall -Werror $(INCLUDE) $(ASNEEDED) -ldl -o tests tests.c
-	./tests
+ctests: thresholdctests killactionctests
 
 thresholdctests:
 	g++ -g -Wall -Werror $(INCLUDE) -ldl -o thresholdtests thresholdtests.c++ threshold.c++
 	./thresholdtests
 
-killactionctests: build
+killactionctests:
 	g++ -g -Wall -Werror $(INCLUDE) -ldl -o killactiontests killactiontests.c++ killaction.c++
 	./killactiontests
 
