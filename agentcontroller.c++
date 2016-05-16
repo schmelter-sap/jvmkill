@@ -45,6 +45,7 @@ void AgentController::setup(char *options) {
   ParametersParser* parser = new ParametersParser();
   setParameters(parser->parse(options));
 }
+
 void AgentController::setParameters(AgentParameters parameters) {
   heuristic = new Threshold(parameters);
   if (parameters.print_heap_histogram) {

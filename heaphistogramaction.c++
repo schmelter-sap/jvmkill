@@ -14,6 +14,7 @@
 
 #include <sys/types.h>
 #include <signal.h>
+#include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,6 +28,26 @@ void printHistogram(jvmtiEnv *jvmti, std::ostream *outputStream) {
 }
 
 HeapHistogramAction::HeapHistogramAction(jvmtiEnv *jvm) {
+	jvmtiCapabilities capabilities;
+
+	/* Get/Add JVMTI capabilities */
+	int err = jvm->GetCapabilities(&capabilities);
+
+    if (err != JVMTI_ERROR_NONE) {
+    	fprintf(stderr, "ERROR: GetCapabilities failed: %d\n", err);
+		throw new std::runtime_error("GetCapabilities failed");
+    }
+	capabilities.can_tag_objects = 1;
+	// capabilities.can_generate_garbage_collection_events = 1;
+	// capabilities.can_get_source_file_name = 1;
+	// capabilities.can_get_line_numbers = 1;
+	// capabilities.can_suspend = 1;
+	err = jvm->AddCapabilities(&capabilities);
+	if (err != JVMTI_ERROR_NONE) {
+      fprintf(stderr, "ERROR: AddCapabilities failed: %d\n", err);
+      throw new std::runtime_error("AddCapabilities failed");
+    }
+
 	jvmti=jvm;
 }
 
@@ -35,25 +56,6 @@ HeapHistogramAction::~HeapHistogramAction() {
 
 void HeapHistogramAction::act() {
 	fprintf(stderr, "Printing Heap Histogram to standard output\n");
-	jvmtiCapabilities capabilities;
-
-	/* Get/Add JVMTI capabilities */
-	int err = jvmti->GetCapabilities(&capabilities);
-    if (err != JVMTI_ERROR_NONE) {
-      fprintf(stderr, "ERROR: GetCapabilities failed: %d\n", err);
-      return;
-    }
-	capabilities.can_tag_objects = 1;
-	capabilities.can_generate_garbage_collection_events = 1;
-	capabilities.can_get_source_file_name = 1;
-	capabilities.can_get_line_numbers = 1;
-	capabilities.can_suspend = 1;
-	err = jvmti->AddCapabilities(&capabilities);
-	if (err != JVMTI_ERROR_NONE) {
-      fprintf(stderr, "ERROR: AddCapabilities failed: %d\n", err);
-      return;
-    }
-
 	printHistogram(jvmti, &(std::cout));
 	fprintf(stderr, "Printed Heap Histogram to standard output\n");
 
