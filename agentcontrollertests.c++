@@ -18,6 +18,7 @@
 
 #include "agentcontroller.h"
 #include "parameters.h"
+#include "parametersparser.h"
 #include "heuristic.h"
 #include "threshold.h"
 #include "killaction.h"
@@ -39,6 +40,8 @@ jvmtiEnv* jvm;
 HeapHistogramAction::HeapHistogramAction(jvmtiEnv* jvm) {
 	MockPrintHeapActionCount++;
 }
+HeapHistogramAction::~HeapHistogramAction() {
+}
 void HeapHistogramAction::act() {
 	MockPrintHeapActionRunOrder = ActionRunCounter++;
 }
@@ -50,6 +53,16 @@ KillAction::KillAction() {
 }
 void KillAction::act() {
 	MockKillActionRunOrder = ActionRunCounter++;
+}
+
+//ParameterParser
+
+ParametersParser::ParametersParser() {
+}
+
+AgentParameters ParametersParser::parse(char *options) {
+	struct AgentParameters agentParameters;
+	return agentParameters;
 }
 
 //Threshold

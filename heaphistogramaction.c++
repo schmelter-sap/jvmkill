@@ -30,6 +30,9 @@ HeapHistogramAction::HeapHistogramAction(jvmtiEnv *jvm) {
 	jvmti=jvm;
 }
 
+HeapHistogramAction::~HeapHistogramAction() {
+}
+
 void HeapHistogramAction::act() {
 	fprintf(stderr, "Printing Heap Histogram to standard output\n");
 	jvmtiCapabilities capabilities;

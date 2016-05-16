@@ -32,7 +32,7 @@ clean:
 
 alltests: ctests threadtests memtests
 
-ctests: thresholdctests killactionctests
+ctests: thresholdctests killactionctests agentcontrollerctests heaphistogramactionctests parameterparserctests
 
 thresholdctests:
 	g++ -g -Wall -Werror $(INCLUDE) -ldl -o thresholdtests thresholdtests.c++ threshold.c++
@@ -43,13 +43,16 @@ killactionctests:
 	./killactiontests
 
 agentcontrollerctests:
-	g++ -g -Wall -Werror $(INCLUDE) -ldl -o agentcontrollertests agentcontrollertests.c++ agentcontroller.c++
+	g++ -g -Wall -Werror -Wno-unused-private-field $(INCLUDE) -ldl -o agentcontrollertests agentcontrollertests.c++ agentcontroller.c++
 	./agentcontrollertests
+
+heaphistogramactionctests:
+	g++ -g -Wall -Werror $(INCLUDE) -ldl -o heaphistogramactiontests heaphistogramactiontests.c++ heaphistogramaction.c++
+	./heaphistogramactiontests
 
 parameterparserctests:
 	g++ -g -Wall -Werror $(INCLUDE) -ldl -o parameterparsertests parametersparsertests.c++ parametersparser.c++
 	./parameterparsertests
-
 
 threadtests: threadtestbasic threadtest0 threadtest-10-2 threadtestpspawn-10-2
 

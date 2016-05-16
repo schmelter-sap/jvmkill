@@ -23,6 +23,8 @@ class HeapHistogramAction: public Action
 public:
    HeapHistogramAction(jvmtiEnv *jvmti);
 
+   virtual ~HeapHistogramAction();
+
    void act();
 private:
    jvmtiEnv* jvmti;
