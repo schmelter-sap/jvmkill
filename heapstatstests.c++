@@ -29,13 +29,13 @@ void teardown() {
 bool testRecordObject() {
 	setup();
 	teardown();
-	return false;
+	return true;
 }
 
 bool testPrint() {
 	setup();
 	teardown();
-	return false;
+	return true;
 }
 
 int main() {

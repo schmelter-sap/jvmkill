@@ -24,11 +24,16 @@
 #include "heaphistogramaction.h"
 #include "heapstats.h"
 
-void printHistogram(jvmtiEnv *jvmti, std::ostream *outputStream) {
-	*outputStream << "Histogram goes here\n";
+void HeapHistogramAction::printHistogram(std::ostream *outputStream) {
+	HeapStats* heapStats = heapStatsFactory->create();
+
+	// TODO: traverse live heap and add objects to heap stats
+
+	heapStats->print(*outputStream);
+	delete heapStats;
 }
 
-HeapHistogramAction::HeapHistogramAction(jvmtiEnv *jvm) {
+HeapHistogramAction::HeapHistogramAction(jvmtiEnv *jvm, HeapStatsFactory* factory) {
 	jvmtiCapabilities capabilities;
 
 	/* Get/Add JVMTI capabilities */
@@ -49,7 +54,8 @@ HeapHistogramAction::HeapHistogramAction(jvmtiEnv *jvm) {
       throw new std::runtime_error("AddCapabilities failed");
     }
 
-	jvmti=jvm;
+	jvmti = jvm;
+	heapStatsFactory = factory;
 }
 
 HeapHistogramAction::~HeapHistogramAction() {
@@ -57,7 +63,7 @@ HeapHistogramAction::~HeapHistogramAction() {
 
 void HeapHistogramAction::act() {
 	fprintf(stderr, "Printing Heap Histogram to standard output\n");
-	printHistogram(jvmti, &(std::cout));
+	printHistogram(&(std::cout));
 	fprintf(stderr, "Printed Heap Histogram to standard output\n");
 
 }

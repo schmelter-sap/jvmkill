@@ -31,9 +31,9 @@ private:
 
 class HeapStatsHashtableFactory: public HeapStatsFactory {
 public:
-   HeapStatsHashtableFactory();
+   HeapStatsHashtableFactory() {}
 
-   virtual ~HeapStatsHashtableFactory();
+   virtual ~HeapStatsHashtableFactory() {}
 
    HeapStats* create() {
      return new HeapStatsHashtable();

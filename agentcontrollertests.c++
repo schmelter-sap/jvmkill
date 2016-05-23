@@ -23,6 +23,7 @@
 #include "threshold.h"
 #include "killaction.h"
 #include "heaphistogramaction.h"
+#include "heapstatshashtable.h"
 #include "action.h"
 
 static int ActionRunCounter = 0;
@@ -37,7 +38,7 @@ jvmtiEnv* jvm;
 /************************************************
  *  mocks
  ************************************************/
-HeapHistogramAction::HeapHistogramAction(jvmtiEnv* jvm) {
+HeapHistogramAction::HeapHistogramAction(jvmtiEnv* jvm, HeapStatsFactory* factory) {
 	MockPrintHeapActionCount++;
 }
 HeapHistogramAction::~HeapHistogramAction() {
@@ -83,6 +84,15 @@ int Threshold::countEvents() {
 bool Threshold::onOOM() {
    return ++MockThresholdEventCount > 1;
 }
+
+//HeapStatsHashtable
+HeapStatsHashtable::HeapStatsHashtable() {}
+
+HeapStatsHashtable::~HeapStatsHashtable() {}
+
+void HeapStatsHashtable::recordObject(const char *className, size_t objectSize) {}
+  
+void HeapStatsHashtable::print(std::ostream& os) const {}
 
 //end of mocks
 

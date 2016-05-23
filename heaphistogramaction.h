@@ -16,18 +16,23 @@
 #define heaphistogramaction_h
 
 #include "action.h"
+#include "heapstats.h"
 #include <jvmti.h>
 
 class HeapHistogramAction: public Action
 {
 public:
-   HeapHistogramAction(jvmtiEnv *jvmti);
+   HeapHistogramAction(jvmtiEnv *jvmti, HeapStatsFactory* factory);
 
    virtual ~HeapHistogramAction();
 
    void act();
+   
 private:
    jvmtiEnv* jvmti;
+   HeapStatsFactory* heapStatsFactory;
+
+   void printHistogram(std::ostream *outputStream);
 };
 
 #endif // heaphistogramaction_h

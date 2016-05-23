@@ -22,6 +22,7 @@
 #include "threshold.h"
 #include "agentcontroller.h"
 #include "heaphistogramaction.h"
+#include "heapstatshashtable.h"
 #include "killaction.h"
 #include "parametersparser.h"
 
@@ -49,7 +50,7 @@ void AgentController::setup(char *options) {
 void AgentController::setParameters(AgentParameters parameters) {
   heuristic = new Threshold(parameters);
   if (parameters.print_heap_histogram) {
-      actions[actionCount++] = new HeapHistogramAction(jvmti);
+      actions[actionCount++] = new HeapHistogramAction(jvmti, new HeapStatsHashtableFactory());
   }
   actions[actionCount++] = new KillAction();
 

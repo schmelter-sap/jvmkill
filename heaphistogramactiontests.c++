@@ -17,6 +17,7 @@
 #include <string.h>
 
 #include "heaphistogramaction.h"
+#include "heapstats.h"
 
 HeapHistogramAction* heapHistogramAction;
 
@@ -43,6 +44,37 @@ jvmtiError (JNICALL MockAddCapabilities) (jvmtiEnv* env,
 	return MockAddCapabilitiesReturnValue;
 }
 
+static const char* MockRecordObjectClassName;
+static size_t MockRecordObjectSize;
+
+class MockHeapStats: public HeapStats {
+public:
+   MockHeapStats() {}
+   virtual ~MockHeapStats() {}
+
+   void recordObject(const char *className, size_t objectSize) {
+     MockRecordObjectClassName = className;
+     MockRecordObjectSize = objectSize;
+   }
+  
+   void print(std::ostream& os) const {
+   	 os << "print called\n";
+   }
+};
+
+class MockHeapStatsFactory: public HeapStatsFactory {
+public:
+   MockHeapStatsFactory() {}
+
+   virtual ~MockHeapStatsFactory() {}
+
+   HeapStats* create() {
+     return new MockHeapStats();
+   }
+};
+
+static MockHeapStatsFactory* MockHSFactory;
+
 void setup() {
 	mockJvmtiEnvStruct.functions = &mockJvmtiInterface_1_;
 
@@ -55,6 +87,8 @@ void setup() {
 	((struct jvmtiInterface_1_ *)mockJvmtiEnvStruct.functions)->AddCapabilities = &MockAddCapabilities;
 
 	mockJvmtiEnv = &mockJvmtiEnvStruct;
+
+	MockHSFactory = new MockHeapStatsFactory();
 }
 
 void teardown() {
@@ -64,7 +98,7 @@ void teardown() {
 bool testConstructionOk() {
 	setup();
 
-	heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv);
+	heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv, MockHSFactory);
 	bool passed = (MockGetCapabilitiesCount == 1) &&
 					(MockAddCapabilitiesCount == 1) &&
 					(MockAddedCapabilities.can_tag_objects == 1);
@@ -83,7 +117,7 @@ bool testConstructionGetCapabilitiesFailure() {
 
     bool passed = false;
     try {
-		heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv);
+		heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv, MockHSFactory);
     } catch (std::runtime_error *re) {
     	passed = (MockGetCapabilitiesCount == 1) &&
     				(MockAddCapabilitiesCount == 0);
@@ -102,7 +136,7 @@ bool testConstructionAddCapabilitiesFailure() {
 
     bool passed = false;
     try {
-		heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv);
+		heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv, MockHSFactory);
     } catch (std::runtime_error *re) {
     	passed = (MockGetCapabilitiesCount == 1) &&
     				(MockAddCapabilitiesCount == 1);
