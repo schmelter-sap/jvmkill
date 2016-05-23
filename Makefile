@@ -32,7 +32,7 @@ clean:
 
 alltests: ctests threadtests memtests
 
-ctests: thresholdctests killactionctests agentcontrollerctests heaphistogramactionctests parameterparserctests
+ctests: thresholdctests killactionctests agentcontrollerctests heaphistogramactionctests heapstatsctests parameterparserctests
 
 thresholdctests:
 	g++ -g -Wall -Werror $(INCLUDE) -ldl -o thresholdtests thresholdtests.c++ threshold.c++
@@ -49,6 +49,10 @@ agentcontrollerctests:
 heaphistogramactionctests:
 	g++ -g -Wall -Werror $(INCLUDE) -ldl -o heaphistogramactiontests heaphistogramactiontests.c++ heaphistogramaction.c++
 	./heaphistogramactiontests
+
+heapstatsctests:
+	g++ -g -Wall -Werror $(INCLUDE) -ldl -o heapstatstests heapstatstests.c++ heapstats.c++
+	./heapstatstests
 
 parameterparserctests:
 	g++ -g -Wall -Werror $(INCLUDE) -ldl -o parameterparsertests parametersparsertests.c++ parametersparser.c++

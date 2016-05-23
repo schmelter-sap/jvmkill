@@ -22,6 +22,7 @@
 #include <iostream>
 
 #include "heaphistogramaction.h"
+#include "heapstats.h"
 
 void printHistogram(jvmtiEnv *jvmti, std::ostream *outputStream) {
 	*outputStream << "Histogram goes here\n";
