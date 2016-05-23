@@ -17,8 +17,7 @@
 
 #include "heapstats.h"
 
-class HeapStatsHashtable: public HeapStats
-{
+class HeapStatsHashtable: public HeapStats {
 public:
    HeapStatsHashtable();
    virtual ~HeapStatsHashtable();
@@ -28,6 +27,17 @@ public:
    void print(std::ostream& os) const;
 
 private:
+};
+
+class HeapStatsHashtableFactory: public HeapStatsFactory {
+public:
+   HeapStatsHashtableFactory();
+
+   virtual ~HeapStatsHashtableFactory();
+
+   HeapStats* create() {
+     return new HeapStatsHashtable();
+   }
 };
 
 #endif // heapstatshashtable_h

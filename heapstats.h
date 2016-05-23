@@ -24,8 +24,7 @@
 #include <unistd.h>
 #include <iostream>
 
-class HeapStats
-{
+class HeapStats {
 public:
   // Destructor
   virtual ~HeapStats() {};
@@ -45,6 +44,14 @@ public:
 //  hs.print(os);
 //  return os;
 //}
+
+class HeapStatsFactory {
+public:
+  // Destructor
+  virtual ~HeapStatsFactory() {};
+
+  virtual HeapStats* create() = 0;
+};
 
 #endif // heapstats_h
 
