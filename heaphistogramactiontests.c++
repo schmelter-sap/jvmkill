@@ -46,6 +46,7 @@ jvmtiError (JNICALL MockAddCapabilities) (jvmtiEnv* env,
 
 static const char* MockRecordObjectClassName;
 static size_t MockRecordObjectSize;
+static int MockPrintCount;
 
 class MockHeapStats: public HeapStats {
 public:
@@ -58,7 +59,7 @@ public:
    }
   
    void print(std::ostream& os) const {
-   	 os << "print called\n";
+   	 MockPrintCount++;
    }
 };
 
@@ -89,6 +90,7 @@ void setup() {
 	mockJvmtiEnv = &mockJvmtiEnvStruct;
 
 	MockHSFactory = new MockHeapStatsFactory();
+	MockPrintCount = 0;
 }
 
 void teardown() {
@@ -149,10 +151,26 @@ bool testConstructionAddCapabilitiesFailure() {
 	return passed;
 }
 
+bool testHeapStatsPrintOk() {
+	setup();
+
+	heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv, MockHSFactory);
+	heapHistogramAction->act();
+	bool passed = MockPrintCount == 1;
+    
+	if (!passed) {
+		fprintf(stdout, "testConstructionAddCapabilitiesFailure FAILED\n");
+	}
+
+	teardown();
+	return passed;
+}
+
 int main() {
 	bool result = (testConstructionOk() &&
 						testConstructionGetCapabilitiesFailure() &&
-						testConstructionAddCapabilitiesFailure());
+						testConstructionAddCapabilitiesFailure() &&
+						testHeapStatsPrintOk());
 	if (result) {
        fprintf(stdout, "SUCCESS\n");
 	   exit(EXIT_SUCCESS);
