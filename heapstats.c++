@@ -17,17 +17,27 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <iostream>
+#include <map>
 
 #include "heapstatshashtable.h"
 
+std::multimap<char,size_t> javaObjects;
+
 HeapStatsHashtable::HeapStatsHashtable() {
+  
 }
 
 HeapStatsHashtable::~HeapStatsHashtable() {
 }
 
 void HeapStatsHashtable::recordObject(const char *className, size_t objectSize) {
+    javaObjects.insert ( std::pair<char, size_t>(*className, objectSize) );
 }
 
 void HeapStatsHashtable::print(std::ostream& os) const {
+    std::multimap<char, size_t>::const_iterator it;
+    
+    for (it=javaObjects.begin(); it!=javaObjects.end(); ++it) {
+        os << (*it).first << " => " << (*it).second << '\n';
+    }
 }

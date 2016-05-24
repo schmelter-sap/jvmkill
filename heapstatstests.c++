@@ -12,40 +12,67 @@
  * limitations under the License.
  */
 
+#include <string>
+#include <sstream>
+#include <iostream>
+
 #include "heapstatshashtable.h"
 
-HeapStats *heapStats;
+HeapStatsHashtable *heapStats;
+
+const char* test_class_name = "java.lang.String";
+const std::string test_result ("j => 24\n");
 
 void setup() {
-  heapStats = new HeapStatsHashtable();
+    heapStats = new HeapStatsHashtable();
 }
 
 void teardown() {
-  if (heapStats != NULL) {
-    delete heapStats;    
-  }
+    if (heapStats != NULL) {
+        delete heapStats;    
+    }
 }
 
-bool testRecordObject() {
-	setup();
-	teardown();
-	return false;
-}
+//bool testRecordObject() {
+//    bool result = false;
+//    setup();
+//    HeapStatsHashtable tHeapStats = *heapStats;
+//    tHeapStats.recordObject(test_class_name, 24);
+//    result = true;
+//    teardown();
+//    return result;
+//}
 
-bool testPrint() {
-	setup();
-	teardown();
-	return false;
+bool testRecordAndPrint() {
+    bool result = false;
+    setup();
+    HeapStatsHashtable tHeapStats = *heapStats;
+    std::stringstream ss;
+    
+    tHeapStats.recordObject(test_class_name, 24); 
+    tHeapStats.print(ss);
+    
+//    std::cout << "***********\n";
+//    std::cout << ss.str().c_str();
+//    std::cout << "***********\n";
+//    std::cout << test_result;
+//    std::cout << "***********\n";
+    
+    if(test_result.compare(ss.str()) == 0) {
+        result = true;
+    }
+    teardown();
+    return result;
 }
 
 int main() {
-	bool result = testRecordObject() && testPrint();
-	if (result) {    	
-    fprintf(stdout, "SUCCESS\n");
-    exit(EXIT_SUCCESS);
-	}
-	else { 
-    fprintf(stdout, "FAILURE\n");
-    exit(EXIT_FAILURE);
-	}	
+    bool result = testRecordAndPrint();
+    if (result) {    	
+        fprintf(stdout, "SUCCESS\n");
+        exit(EXIT_SUCCESS);
+    }
+    else { 
+        fprintf(stdout, "FAILURE\n");
+        exit(EXIT_FAILURE);
+    }	
 }

@@ -26,31 +26,30 @@
 
 class HeapStats {
 public:
-  // Destructor
-  virtual ~HeapStats() {};
+    // Destructor
+    virtual ~HeapStats() {};
   
-  /* Record the statistics for a single object: the class name (in internal JVM format) and
-     the object size.
-   */
-  virtual void recordObject(const char *className, size_t objectSize) = 0;
+    /* Record the statistics for a single object: the class name (in internal JVM format) 
+    and the object size in bytes.
+     */
+    virtual void recordObject(const char *className, size_t objectSize) = 0;
   
-  // Print a histogram of the heap statistics to the given output stream.
-  virtual void print(std::ostream& os) const = 0;
+    // Print a histogram of the heap statistics to the given output stream.
+    virtual void print(std::ostream& os) const = 0;
 };
 
 // Bind the stream output operator to the HeapStats print method.
-//std::ostream& operator<<(std::ostream& os, const HeapStats& hs)
-//{
-//  hs.print(os);
-//  return os;
+//std::ostream& operator<<(std::ostream& os, const HeapStats& hs) {
+//    hs.print(os);
+//    return os;
 //}
 
 class HeapStatsFactory {
 public:
-  // Destructor
-  virtual ~HeapStatsFactory() {};
+    // Destructor
+    virtual ~HeapStatsFactory() {};
 
-  virtual HeapStats* create() = 0;
+    virtual HeapStats* create() = 0;
 };
 
 #endif // heapstats_h

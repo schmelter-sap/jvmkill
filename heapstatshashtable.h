@@ -19,25 +19,25 @@
 
 class HeapStatsHashtable: public HeapStats {
 public:
-   HeapStatsHashtable();
-   virtual ~HeapStatsHashtable();
+    HeapStatsHashtable();
+    virtual ~HeapStatsHashtable();
 
-   void recordObject(const char *className, size_t objectSize);
+    void recordObject(const char *className, size_t objectSize);
   
-   void print(std::ostream& os) const;
+    void print(std::ostream& os) const;
 
 private:
 };
 
 class HeapStatsHashtableFactory: public HeapStatsFactory {
 public:
-   HeapStatsHashtableFactory();
+    HeapStatsHashtableFactory();
 
-   virtual ~HeapStatsHashtableFactory();
+    virtual ~HeapStatsHashtableFactory();
 
-   HeapStats* create() {
-     return new HeapStatsHashtable();
-   }
+    HeapStats* create() {
+        return new HeapStatsHashtable();
+    }
 };
 
 #endif // heapstatshashtable_h
