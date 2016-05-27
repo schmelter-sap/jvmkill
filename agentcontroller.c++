@@ -34,10 +34,10 @@ AgentController::AgentController(jvmtiEnv* jvm) {
   actions = new Action*[MAX_ACTIONS];
 }
 
-void AgentController::onOOM() {
+void AgentController::onOOM(JNIEnv* jniEnv) {
   if (heuristic->onOOM()) {
     for (int i=0;i<actionCount;i++) {
-      actions[i]->act();
+      actions[i]->act(jniEnv);
     }
   }
 }

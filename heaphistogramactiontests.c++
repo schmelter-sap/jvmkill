@@ -21,6 +21,8 @@
 
 HeapHistogramAction* heapHistogramAction;
 
+JNIEnv* mockJNIEnv;
+
 struct jvmtiInterface_1_ mockJvmtiInterface_1_;
 jvmtiEnv mockJvmtiEnvStruct;
 jvmtiEnv *mockJvmtiEnv;
@@ -42,6 +44,19 @@ jvmtiError (JNICALL MockAddCapabilities) (jvmtiEnv* env,
 	MockAddCapabilitiesCount++;
 	memcpy(&MockAddedCapabilities, capabilities, sizeof(jvmtiCapabilities));
 	return MockAddCapabilitiesReturnValue;
+}
+
+static int MockGetLoadedClassesCount;
+static jint MockGetLoadedClassesResultantClassCount;
+static jclass* MockGetLoadedClassesResultantClasses;
+static jvmtiError MockGetLoadedClassesReturnValue;
+jvmtiError (JNICALL MockGetLoadedClasses) (jvmtiEnv* env,
+    jint* classCount,
+    jclass** classes) {
+	MockGetLoadedClassesCount++;
+	*classCount = MockGetLoadedClassesResultantClassCount;
+	*classes = MockGetLoadedClassesResultantClasses;
+	return MockGetLoadedClassesReturnValue;
 }
 
 static const char* MockRecordObjectClassName;
@@ -77,6 +92,8 @@ public:
 static MockHeapStatsFactory* MockHSFactory;
 
 void setup() {
+	mockJNIEnv = 0; // FIXME
+
 	mockJvmtiEnvStruct.functions = &mockJvmtiInterface_1_;
 
 	MockGetCapabilitiesCount = 0;
@@ -86,6 +103,10 @@ void setup() {
 	MockAddCapabilitiesCount = 0;
 	MockAddCapabilitiesReturnValue = JVMTI_ERROR_NONE;
 	((struct jvmtiInterface_1_ *)mockJvmtiEnvStruct.functions)->AddCapabilities = &MockAddCapabilities;
+
+	MockGetLoadedClassesCount = 0;
+	MockGetLoadedClassesReturnValue = JVMTI_ERROR_NONE;
+	((struct jvmtiInterface_1_ *)mockJvmtiEnvStruct.functions)->GetLoadedClasses = &MockGetLoadedClasses;
 
 	mockJvmtiEnv = &mockJvmtiEnvStruct;
 
@@ -104,6 +125,7 @@ bool testConstructionOk() {
 	bool passed = (MockGetCapabilitiesCount == 1) &&
 					(MockAddCapabilitiesCount == 1) &&
 					(MockAddedCapabilities.can_tag_objects == 1);
+	
 	if (!passed) {
 		fprintf(stdout, "testConstruction FAILED\n");
 	}
@@ -124,6 +146,7 @@ bool testConstructionGetCapabilitiesFailure() {
     	passed = (MockGetCapabilitiesCount == 1) &&
     				(MockAddCapabilitiesCount == 0);
 	}
+
 	if (!passed) {
 		fprintf(stdout, "testConstructionGetCapabilitiesFailure FAILED\n");
 	}
@@ -143,6 +166,7 @@ bool testConstructionAddCapabilitiesFailure() {
     	passed = (MockGetCapabilitiesCount == 1) &&
     				(MockAddCapabilitiesCount == 1);
 	}
+
 	if (!passed) {
 		fprintf(stdout, "testConstructionAddCapabilitiesFailure FAILED\n");
 	}
@@ -151,15 +175,45 @@ bool testConstructionAddCapabilitiesFailure() {
 	return passed;
 }
 
+// TODO: need to return at least one loaded class and test that
+// HeapHistogramAction::tagLoadedClass works correctly, i.e. that
+// GetClassSignature and SetTag are called correctly.
+//
+// TODO: add two more test methods for when GetClassSignature or SetTag fails
 bool testHeapStatsPrintOk() {
 	setup();
+	MockGetLoadedClassesResultantClassCount = 0;
 
 	heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv, MockHSFactory);
-	heapHistogramAction->act();
-	bool passed = MockPrintCount == 1;
+	heapHistogramAction->act(mockJNIEnv);
+	bool passed = (MockGetLoadedClassesCount == 1) &&
+					(MockPrintCount == 1);
     
 	if (!passed) {
-		fprintf(stdout, "testConstructionAddCapabilitiesFailure FAILED\n");
+		fprintf(stdout, "testHeapStatsPrintOk FAILED\n");
+	}
+
+	teardown();
+	return passed;
+}
+
+bool testHeapStatsGetLoadedClassesFailure() {
+	setup();
+	MockGetLoadedClassesReturnValue = JVMTI_ERROR_ACCESS_DENIED;
+
+	heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv, MockHSFactory);
+	
+    bool passed = false;
+    try {
+		heapHistogramAction->act(mockJNIEnv);
+    } catch (std::runtime_error *re) {
+    	passed = (MockGetCapabilitiesCount == 1) &&
+    				(MockAddCapabilitiesCount == 1) &&
+    				(MockGetLoadedClassesCount == 1);
+	}
+
+	if (!passed) {
+		fprintf(stdout, "testHeapStatsGetLoadedClassesFailure FAILED\n");
 	}
 
 	teardown();
@@ -170,7 +224,8 @@ int main() {
 	bool result = (testConstructionOk() &&
 						testConstructionGetCapabilitiesFailure() &&
 						testConstructionAddCapabilitiesFailure() &&
-						testHeapStatsPrintOk());
+						testHeapStatsPrintOk() &&
+						testHeapStatsGetLoadedClassesFailure());
 	if (result) {
        fprintf(stdout, "SUCCESS\n");
 	   exit(EXIT_SUCCESS);

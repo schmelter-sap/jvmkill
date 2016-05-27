@@ -35,6 +35,7 @@ static int MockKillActionCount = 0;
 static int MockThresholdEventCount = 0;
 AgentController* agentController;
 jvmtiEnv* jvm;
+JNIEnv* mockJNIEnv;
 /************************************************
  *  mocks
  ************************************************/
@@ -43,7 +44,7 @@ HeapHistogramAction::HeapHistogramAction(jvmtiEnv* jvm, HeapStatsFactory* factor
 }
 HeapHistogramAction::~HeapHistogramAction() {
 }
-void HeapHistogramAction::act() {
+void HeapHistogramAction::act(JNIEnv* jniEnv) {
 	MockPrintHeapActionRunOrder = ActionRunCounter++;
 }
 
@@ -52,7 +53,7 @@ void HeapHistogramAction::act() {
 KillAction::KillAction() {
 	MockKillActionCount++;
 }
-void KillAction::act() {
+void KillAction::act(JNIEnv* jniEnv) {
 	MockKillActionRunOrder = ActionRunCounter++;
 }
 
@@ -98,6 +99,7 @@ void HeapStatsHashtable::print(std::ostream& os) const {}
 
 void setup() {
 	agentController = new AgentController(NULL);
+	mockJNIEnv = 0;
 }
 
 void teardown() {
@@ -151,12 +153,12 @@ bool testRunsAllActionsInCorrectOrderOnOOM() {
 
 	//MockThreshold returns true for OOM on second attempt, therefore should not
 	//run actions on first call
-	agentController->onOOM();
+	agentController->onOOM(mockJNIEnv);
 	bool firstAssertions = ((MockPrintHeapActionRunOrder == -1) &&
 	               (MockKillActionRunOrder == -1) &&
 								 (MockThresholdEventCount == 1));
 
-	agentController->onOOM();
+	agentController->onOOM(mockJNIEnv);
   bool passed = ((MockPrintHeapActionRunOrder == 0) &&
 	               (MockKillActionRunOrder == 1) &&
 								 (MockThresholdEventCount > 1) &&

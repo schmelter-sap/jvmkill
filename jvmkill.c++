@@ -31,7 +31,7 @@ void resourceExhausted(
       return;
    }
 
-   agentController->onOOM();
+   agentController->onOOM(jni_env);
 
    err = jvmti_env->RawMonitorExit(monitorID);
    if (err != JVMTI_ERROR_NONE) {

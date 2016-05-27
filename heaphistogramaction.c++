@@ -24,13 +24,61 @@
 #include "heaphistogramaction.h"
 #include "heapstats.h"
 
-void HeapHistogramAction::printHistogram(std::ostream *outputStream) {
+void HeapHistogramAction::printHistogram(JNIEnv* jniEnv, std::ostream *outputStream) {
 	HeapStats* heapStats = heapStatsFactory->create();
 
 	// TODO: traverse live heap and add objects to heap stats
 
+	tagLoadedClasses(jniEnv);
+
+	// Pick a suitable object tag, use 1L for now
+	// but see http://stackoverflow.com/questions/37439576/are-object-tags-set-by-the-jvm-visible-to-jvmti-agents
+
+	// use FollowReferences to traverse the live heap
+	// For each object encountered, tag it so it won't be encountered again
+	// noting that the histogram is computed at most once in the lifetime of a JVM
+
+	// Look up the object's class tag to get its class name.
+
+	// Record the objects information in the heap stats.
+
 	heapStats->print(*outputStream);
 	delete heapStats;
+}
+
+void HeapHistogramAction::tagLoadedClasses(JNIEnv* jniEnv) {
+	jint classCount;
+	jclass* classes;
+	jvmtiError err = jvmti->GetLoadedClasses(&classCount, &classes);
+	if (err != JVMTI_ERROR_NONE) {
+		fprintf(stderr, "ERROR: GetLoadedClasses failed: %d\n", err);
+		throw new std::runtime_error("GetLoadedClasses failed");
+    }
+
+    for (int i = 0; i < classCount; i++) {
+    	tagLoadedClass(jniEnv, classes[i]);
+    }
+}
+
+void HeapHistogramAction::tagLoadedClass(JNIEnv* jniEnv, jclass& cls) {
+	char * classSignature;
+	jvmtiError err = jvmti->GetClassSignature(cls, &classSignature, 0);
+    if (err != JVMTI_ERROR_NONE) {
+		fprintf(stderr, "ERROR: GetClassSignature failed: %d\n", err);
+		throw new std::runtime_error("GetClassSignature failed");
+    }
+
+    nextClassTag++;
+
+	err = jvmti->SetTag(cls, nextClassTag);
+	if (err != JVMTI_ERROR_NONE) {
+		fprintf(stderr, "ERROR: SetTag failed: %d\n", err);
+		throw new std::runtime_error("SetTag failed");
+    }
+
+    taggedClass[nextClassTag] = strdup(classSignature); // Freed in destructor
+
+	jvmti->Deallocate((unsigned char *)classSignature); // Ignore return value
 }
 
 HeapHistogramAction::HeapHistogramAction(jvmtiEnv *jvm, HeapStatsFactory* factory) {
@@ -56,14 +104,19 @@ HeapHistogramAction::HeapHistogramAction(jvmtiEnv *jvm, HeapStatsFactory* factor
 
 	jvmti = jvm;
 	heapStatsFactory = factory;
+	nextClassTag = 0;
 }
 
 HeapHistogramAction::~HeapHistogramAction() {
+	// free all values in taggedClass
+	for (auto it = taggedClass.begin(); it != taggedClass.end(); ++it) {
+		delete[] it->second;
+	}
 }
 
-void HeapHistogramAction::act() {
+void HeapHistogramAction::act(JNIEnv* jniEnv) {
 	fprintf(stderr, "Printing Heap Histogram to standard output\n");
-	printHistogram(&(std::cout));
+	printHistogram(jniEnv, &(std::cout));
 	fprintf(stderr, "Printed Heap Histogram to standard output\n");
 
 }

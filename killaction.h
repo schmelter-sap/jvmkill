@@ -22,7 +22,7 @@ class KillAction: public Action
 public:
    KillAction();
 
-   void act();
+   void act(JNIEnv* jniEnv);
 
    void setSignal(int signal);
 

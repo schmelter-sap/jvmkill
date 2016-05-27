@@ -26,7 +26,7 @@ public:
    AgentController(jvmtiEnv* jvm);
    void setup(char *options);
    void setParameters(AgentParameters parameters);
-   void onOOM();
+   void onOOM(JNIEnv *);
 private:
   jvmtiEnv* jvmti;
   Heuristic* heuristic;

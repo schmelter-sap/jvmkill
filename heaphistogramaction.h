@@ -17,7 +17,10 @@
 
 #include "action.h"
 #include "heapstats.h"
+#include <jni.h>
 #include <jvmti.h>
+#include <unordered_map>
+using namespace std;
 
 class HeapHistogramAction: public Action
 {
@@ -26,13 +29,19 @@ public:
 
    virtual ~HeapHistogramAction();
 
-   void act();
+   void act(JNIEnv* jniEnv);
    
 private:
    jvmtiEnv* jvmti;
    HeapStatsFactory* heapStatsFactory;
 
-   void printHistogram(std::ostream *outputStream);
+   // Map from class tag to class signature
+   unordered_map<jlong, const char*> taggedClass;
+   jlong nextClassTag;
+
+   void printHistogram(JNIEnv* jniEnv, std::ostream *outputStream);
+   void tagLoadedClasses(JNIEnv* jniEnv);
+   void tagLoadedClass(JNIEnv* jniEnv, jclass& cls);
 };
 
 #endif // heaphistogramaction_h

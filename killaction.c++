@@ -25,7 +25,7 @@ KillAction::KillAction() {
    signal = SIGKILL;
 }
 
-void KillAction::act() {
+void KillAction::act(JNIEnv* jniEnv) {
 	fprintf(stderr, "killing current process\n");
     kill(getpid(), signal);
 }
