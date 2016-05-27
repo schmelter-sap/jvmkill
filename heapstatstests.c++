@@ -20,8 +20,8 @@
 
 HeapStatsHashtable *heapStats;
 
-const char* test_class_name = "java.lang.String";
-const std::string test_result ("j => 24\n");
+const char* test_class_name_1 = "java.lang.Object";
+const char* test_class_name_2 = "java.lang.long.longer.String";
 
 void setup() {
     heapStats = new HeapStatsHashtable();
@@ -33,40 +33,74 @@ void teardown() {
     }
 }
 
-//bool testRecordObject() {
-//    bool result = false;
-//    setup();
-//    HeapStatsHashtable tHeapStats = *heapStats;
-//    tHeapStats.recordObject(test_class_name, 24);
-//    result = true;
-//    teardown();
-//    return result;
-//}
-
-bool testRecordAndPrint() {
+bool verify(std::string test, std::string expected, std::string actual) {
     bool result = false;
+    if(expected.compare(actual) == 0) {
+        result = true;
+    } else {
+        std::cout << "ERROR - " << test << " has failed.\n";
+        std::cout << "Expected:\n" << expected << "\n";
+        std::cout << "Actual:\n" << actual << "\n";
+        std::cout << "\n";
+    }
+    return result;
+}
+
+bool testSingleRecordAndPrint() {
     setup();
     HeapStatsHashtable tHeapStats = *heapStats;
     std::stringstream ss;
     
-    tHeapStats.recordObject(test_class_name, 24); 
+    tHeapStats.recordObject(test_class_name_1, 24);
     tHeapStats.print(ss);
     
-//    std::cout << "***********\n";
-//    std::cout << ss.str().c_str();
-//    std::cout << "***********\n";
-//    std::cout << test_result;
-//    std::cout << "***********\n";
+    const std::string expected ("| Class Name       | Size of Objects |\n"
+                                "| java.lang.Object | 24              |\n");
     
-    if(test_result.compare(ss.str()) == 0) {
-        result = true;
-    }
+    bool result = verify ("testSingleRecordAndPrint", expected.c_str(), ss.str().c_str());
+    teardown();
+    return result;
+}
+
+bool testMultiRecordAndPrint() {
+    setup();
+    HeapStatsHashtable tHeapStats = *heapStats;
+    std::stringstream ss;
+    
+    tHeapStats.recordObject(test_class_name_1, 24);
+    tHeapStats.recordObject(test_class_name_2, 36);
+    tHeapStats.print(ss);
+    
+    const std::string expected ("| Class Name                   | Size of Objects |\n"
+                                "| java.lang.long.longer.String | 36              |\n"
+                                "| java.lang.Object             | 24              |\n");
+    
+    bool result = verify ("testMultiRecordAndPrint", expected.c_str(), ss.str().c_str());
+    teardown();
+    return result;
+}
+
+bool testDuplicateRecordAndPrint() {
+    setup();
+    HeapStatsHashtable tHeapStats = *heapStats;
+    std::stringstream ss;
+    
+    tHeapStats.recordObject(test_class_name_1, 24);
+    tHeapStats.recordObject(test_class_name_1, 26);
+    tHeapStats.recordObject(test_class_name_2, 32);
+    tHeapStats.print(ss);
+    
+    const std::string expected ("| Class Name                   | Size of Objects |\n"
+                                "| java.lang.long.longer.String | 32              |\n"
+                                "| java.lang.Object             | 50              |\n");
+    
+    bool result = verify ("testDuplicateRecordAndPrint", expected.c_str(), ss.str().c_str());
     teardown();
     return result;
 }
 
 int main() {
-    bool result = testRecordAndPrint();
+    bool result = testSingleRecordAndPrint() && testMultiRecordAndPrint() && testDuplicateRecordAndPrint();
     if (result) {    	
         fprintf(stdout, "SUCCESS\n");
         exit(EXIT_SUCCESS);
