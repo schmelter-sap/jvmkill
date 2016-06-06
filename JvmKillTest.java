@@ -22,16 +22,16 @@ public final class JvmKillTest
     {
         System.out.println("triggering OutOfMemmory...");
         List<Object> list = new ArrayList<>();
-        try {
             while (true) {
+              try {
                 byte[] bytes = new byte[1024 * 1024 * 1024];
                 list.add(bytes);
                 System.out.println("list size: " + list.size());
+              }
+              catch (Throwable t) {
+                  System.out.println("final list size: " + list.size());
+                  System.out.println(t.toString());
+              }
             }
-        }
-        catch (Throwable t) {
-            System.out.println(t.toString());
-        }
-        System.out.println("final list size: " + list.size());
     }
 }
