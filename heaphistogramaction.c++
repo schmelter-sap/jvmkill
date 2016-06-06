@@ -120,11 +120,8 @@ jint HeapHistogramAction::heapReferenceCallback(jvmtiHeapReferenceKind reference
 	// noting that the histogram is computed at most once in the lifetime of a JVM
 	*tag_ptr = TAG_VISITED;
  
- 	if (taggedClass.find(class_tag) == taggedClass.end()) {
-        fprintf(stderr, "heapReferenceCallback: class tag not found\n");
-	} else {
+ 	if (taggedClass.find(class_tag) != taggedClass.end()) {
 		heapStats->recordObject(taggedClass[class_tag], size);
-		fprintf(stderr, "heapReferenceCallback for %s, size %ld, length %d\n", taggedClass[class_tag], size, length);		
 	}
 
 	return JVMTI_VISIT_OBJECTS;
