@@ -15,6 +15,7 @@
 #include <stdexcept>
 #include <stdlib.h>
 #include <string.h>
+#include <vector>
 
 #include "heaphistogramaction.h"
 #include "heapstats.h"
@@ -29,7 +30,7 @@ jvmtiEnv *mockJvmtiEnv;
 
 static int MockGetCapabilitiesCount;
 static jvmtiError MockGetCapabilitiesReturnValue;
-jvmtiError (JNICALL MockGetCapabilities) (jvmtiEnv* env, 
+jvmtiError (JNICALL MockGetCapabilities) (jvmtiEnv* env,
 	jvmtiCapabilities* capabilities) {
 	MockGetCapabilitiesCount++;
 	capabilities->can_generate_garbage_collection_events = 0;
@@ -39,7 +40,7 @@ jvmtiError (JNICALL MockGetCapabilities) (jvmtiEnv* env,
 static int MockAddCapabilitiesCount;
 static jvmtiError MockAddCapabilitiesReturnValue;
 static jvmtiCapabilities MockAddedCapabilities;
-jvmtiError (JNICALL MockAddCapabilities) (jvmtiEnv* env, 
+jvmtiError (JNICALL MockAddCapabilities) (jvmtiEnv* env,
 	const jvmtiCapabilities* capabilities) {
 	MockAddCapabilitiesCount++;
 	memcpy(&MockAddedCapabilities, capabilities, sizeof(jvmtiCapabilities));
@@ -59,6 +60,45 @@ jvmtiError (JNICALL MockGetLoadedClasses) (jvmtiEnv* env,
 	return MockGetLoadedClassesReturnValue;
 }
 
+static int MockFollowReferencesCount;
+static jvmtiError MockFollowReferencesReturnValue;
+jvmtiError (JNICALL MockFollowReferences) (jvmtiEnv* env,
+  jint heap_filter,
+  jclass klass,
+  jobject initial_object,
+  const jvmtiHeapCallbacks* callbacks,
+  const void* user_data) {
+	MockFollowReferencesCount++;
+  return MockFollowReferencesReturnValue;
+}
+
+static int MockGetClassSignatureCount;
+static jvmtiError MockGetClassSignatureReturnValue;
+jvmtiError (JNICALL MockGetClassSignature) (jvmtiEnv* env,
+	jclass klass,
+	char** signature_ptr,
+	char** generic_ptr) {
+	MockGetClassSignatureCount++;
+	return MockGetClassSignatureReturnValue;
+}
+
+static vector<jlong> MockSetTagTagsSet;
+static jvmtiError MockSetTagReturnValue;
+jvmtiError (JNICALL MockSetTag) (jvmtiEnv* env,
+	jobject object,
+	jlong tag) {
+	MockSetTagTagsSet.push_back(tag);
+	return MockSetTagReturnValue;
+}
+
+static int MockDeallocateCount;
+static jvmtiError MockDeallocateReturnValue;
+jvmtiError (JNICALL MockDeallocate) (jvmtiEnv* env,
+	unsigned char* mem) {
+	MockDeallocateCount++;
+	return MockDeallocateReturnValue;
+}
+
 static const char* MockRecordObjectClassName;
 static size_t MockRecordObjectSize;
 static int MockPrintCount;
@@ -72,7 +112,7 @@ public:
      MockRecordObjectClassName = className;
      MockRecordObjectSize = objectSize;
    }
-  
+
    void print(std::ostream& os) const {
    	 MockPrintCount++;
    }
@@ -99,7 +139,7 @@ void setup() {
 	MockGetCapabilitiesCount = 0;
 	MockGetCapabilitiesReturnValue = JVMTI_ERROR_NONE;
 	((struct jvmtiInterface_1_ *)mockJvmtiEnvStruct.functions)->GetCapabilities = &MockGetCapabilities;
-	
+
 	MockAddCapabilitiesCount = 0;
 	MockAddCapabilitiesReturnValue = JVMTI_ERROR_NONE;
 	((struct jvmtiInterface_1_ *)mockJvmtiEnvStruct.functions)->AddCapabilities = &MockAddCapabilities;
@@ -107,6 +147,21 @@ void setup() {
 	MockGetLoadedClassesCount = 0;
 	MockGetLoadedClassesReturnValue = JVMTI_ERROR_NONE;
 	((struct jvmtiInterface_1_ *)mockJvmtiEnvStruct.functions)->GetLoadedClasses = &MockGetLoadedClasses;
+
+	MockSetTagReturnValue = JVMTI_ERROR_NONE;
+	((struct jvmtiInterface_1_ *)mockJvmtiEnvStruct.functions)->SetTag = &MockSetTag;
+
+	MockGetClassSignatureCount = 0;
+	MockGetClassSignatureReturnValue = JVMTI_ERROR_NONE;
+	((struct jvmtiInterface_1_ *)mockJvmtiEnvStruct.functions)->GetClassSignature = &MockGetClassSignature;
+
+	MockDeallocateCount = 0;
+	MockDeallocateReturnValue = JVMTI_ERROR_NONE;
+	((struct jvmtiInterface_1_ *)mockJvmtiEnvStruct.functions)->Deallocate = &MockDeallocate;
+
+	MockFollowReferencesReturnValue = JVMTI_ERROR_NONE;
+	((struct jvmtiInterface_1_ *)mockJvmtiEnvStruct.functions)->FollowReferences = &MockFollowReferences;
+
 
 	mockJvmtiEnv = &mockJvmtiEnvStruct;
 
@@ -125,7 +180,7 @@ bool testConstructionOk() {
 	bool passed = (MockGetCapabilitiesCount == 1) &&
 					(MockAddCapabilitiesCount == 1) &&
 					(MockAddedCapabilities.can_tag_objects == 1);
-	
+
 	if (!passed) {
 		fprintf(stdout, "testConstruction FAILED\n");
 	}
@@ -188,7 +243,7 @@ bool testHeapStatsPrintOk() {
 	heapHistogramAction->act(mockJNIEnv);
 	bool passed = (MockGetLoadedClassesCount == 1) &&
 					(MockPrintCount == 1);
-    
+
 	if (!passed) {
 		fprintf(stdout, "testHeapStatsPrintOk FAILED\n");
 	}
@@ -202,7 +257,7 @@ bool testHeapStatsGetLoadedClassesFailure() {
 	MockGetLoadedClassesReturnValue = JVMTI_ERROR_ACCESS_DENIED;
 
 	heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv, MockHSFactory);
-	
+
     bool passed = false;
     try {
 		heapHistogramAction->act(mockJNIEnv);
@@ -220,11 +275,34 @@ bool testHeapStatsGetLoadedClassesFailure() {
 	return passed;
 }
 
+bool testHeapStatsTagsClassesReturnedByGetLoadedClasses() {
+	setup();
+	MockGetLoadedClassesReturnValue = JVMTI_ERROR_NONE;
+  MockGetLoadedClassesResultantClassCount = 2;
+	MockGetLoadedClassesResultantClasses = new jclass[2];
+	heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv, MockHSFactory);
+
+  bool passed = false;
+	heapHistogramAction->act(mockJNIEnv);
+	passed = ((MockSetTagTagsSet[0] == 1) &&
+						(MockSetTagTagsSet[1] == 2));
+
+	if (!passed) {
+		fprintf(stdout, "tags %ld %ld\n", MockSetTagTagsSet[0], MockSetTagTagsSet[1]);
+		fprintf(stdout, "testHeapStatsTagsClassesReturnedByGetLoadedClasses FAILED\n");
+	}
+
+	teardown();
+	return passed;
+}
+
+
 int main() {
 	bool result = (testConstructionOk() &&
 						testConstructionGetCapabilitiesFailure() &&
 						testConstructionAddCapabilitiesFailure() &&
 						testHeapStatsPrintOk() &&
+						testHeapStatsTagsClassesReturnedByGetLoadedClasses() &&
 						testHeapStatsGetLoadedClassesFailure());
 	if (result) {
        fprintf(stdout, "SUCCESS\n");
