@@ -30,10 +30,20 @@ public:
    virtual ~HeapHistogramAction();
 
    void act(JNIEnv* jniEnv);
+
+   jint heapReferenceCallback(jvmtiHeapReferenceKind reference_kind, 
+     const jvmtiHeapReferenceInfo* reference_info, 
+     jlong class_tag, 
+     jlong referrer_class_tag, 
+     jlong size, 
+     jlong* tag_ptr, 
+     jlong* referrer_tag_ptr, 
+     jint length);
    
 private:
    jvmtiEnv* jvmti;
    HeapStatsFactory* heapStatsFactory;
+   HeapStats* heapStats;
 
    // Map from class tag to class signature
    unordered_map<jlong, const char*> taggedClass;

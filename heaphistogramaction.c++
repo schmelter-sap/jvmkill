@@ -24,26 +24,49 @@
 #include "heaphistogramaction.h"
 #include "heapstats.h"
 
+// Pick a suitable object tag, use 1L for now
+// but see http://stackoverflow.com/questions/37439576/are-object-tags-set-by-the-jvm-visible-to-jvmti-agents
+const jlong TAG_VISITED = 1;
+
+jint (JNICALL heapRefCallback)(jvmtiHeapReferenceKind reference_kind, 
+     const jvmtiHeapReferenceInfo* reference_info, 
+     jlong class_tag, 
+     jlong referrer_class_tag, 
+     jlong size, 
+     jlong* tag_ptr, 
+     jlong* referrer_tag_ptr, 
+     jint length, 
+     void* user_data) {
+	return ((HeapHistogramAction*)user_data)->heapReferenceCallback(reference_kind,
+		reference_info,
+		class_tag,
+		referrer_class_tag,
+		size,
+		tag_ptr,
+		referrer_tag_ptr,
+		length);
+}
+
 void HeapHistogramAction::printHistogram(JNIEnv* jniEnv, std::ostream *outputStream) {
-	HeapStats* heapStats = heapStatsFactory->create();
+	heapStats = heapStatsFactory->create();
 
-	// TODO: traverse live heap and add objects to heap stats
-
+	// Tag all loaded classes so we can determine each object's class signature during heap traversal.
 	tagLoadedClasses(jniEnv);
 
-	// Pick a suitable object tag, use 1L for now
-	// but see http://stackoverflow.com/questions/37439576/are-object-tags-set-by-the-jvm-visible-to-jvmti-agents
+	// Traverse the live heap and add objects to the heap stats.
+	jvmtiHeapCallbacks callbacks = {};
+	callbacks.heap_reference_callback = &heapRefCallback;
 
-	// use FollowReferences to traverse the live heap
-	// For each object encountered, tag it so it won't be encountered again
-	// noting that the histogram is computed at most once in the lifetime of a JVM
+	jvmtiError err = jvmti->FollowReferences(0, NULL, NULL, &callbacks, this);
+	if (err != JVMTI_ERROR_NONE) {
+		fprintf(stderr, "ERROR: FollowReferences failed: %d\n", err);
+		throw new std::runtime_error("FollowReferences failed");
+    }
 
-	// Look up the object's class tag to get its class name.
-
-	// Record the objects information in the heap stats.
-
+    // Print the histogram.
 	heapStats->print(*outputStream);
 	delete heapStats;
+	heapStats = NULL;
 }
 
 void HeapHistogramAction::tagLoadedClasses(JNIEnv* jniEnv) {
@@ -79,6 +102,32 @@ void HeapHistogramAction::tagLoadedClass(JNIEnv* jniEnv, jclass& cls) {
     taggedClass[nextClassTag] = strdup(classSignature); // Freed in destructor
 
 	jvmti->Deallocate((unsigned char *)classSignature); // Ignore return value
+}
+
+jint HeapHistogramAction::heapReferenceCallback(jvmtiHeapReferenceKind reference_kind, 
+     const jvmtiHeapReferenceInfo* reference_info, 
+     jlong class_tag, 
+     jlong referrer_class_tag, 
+     jlong size, 
+     jlong* tag_ptr, 
+     jlong* referrer_tag_ptr, 
+     jint length) {
+	if (*tag_ptr == TAG_VISITED) {
+		return 0;
+	}
+
+	// For each object encountered, tag it so we can avoid visiting it again
+	// noting that the histogram is computed at most once in the lifetime of a JVM
+	*tag_ptr = TAG_VISITED;
+ 
+ 	if (taggedClass.find(class_tag) == taggedClass.end()) {
+        fprintf(stderr, "heapReferenceCallback: class tag not found\n");
+	} else {
+		heapStats->recordObject(taggedClass[class_tag], size);
+		fprintf(stderr, "heapReferenceCallback for %s, length %ld\n", taggedClass[class_tag], size);		
+	}
+
+	return JVMTI_VISIT_OBJECTS;
 }
 
 HeapHistogramAction::HeapHistogramAction(jvmtiEnv *jvm, HeapStatsFactory* factory) {
