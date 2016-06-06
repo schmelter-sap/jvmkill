@@ -91,8 +91,8 @@ bool testDuplicateRecordAndPrint() {
     tHeapStats.print(ss);
     
     const std::string expected ("| Instance Count | Total Size | Class Name                   |\n"
-                                "| 1              | 32         | java.lang.long.longer.String |\n"
-                                "| 2              | 50         | java.lang.Object             |\n");
+                                "| 2              | 50         | java.lang.Object             |\n"
+                                "| 1              | 32         | java.lang.long.longer.String |\n");
     
     bool result = verify ("testDuplicateRecordAndPrint", expected.c_str(), ss.str().c_str());
     teardown();

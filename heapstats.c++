@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <unordered_map>
+#include <map>
 
 #include "heapstatshashtable.h"
 
@@ -51,17 +52,14 @@ void HeapStatsHashtable::recordObject(const char *className, size_t objectSize) 
         longestClassName = classNameString.length();
     }
     ObjectCount tmpCount = {objectSize, objectCount};
-    javaObjects.insert ( std::pair<std::string, ObjectCount>(classNameString, tmpCount) );
+    javaObjects.insert (std::pair<std::string, ObjectCount>(classNameString, tmpCount) );
 }
 
 void HeapStatsHashtable::print(std::ostream& os) const {
+    
     std::unordered_map<std::string, ObjectCount>::const_iterator it;
-    
-    std::string heading = "Class Name";
-    heading.resize(longestClassName, ' ');
-    
-    os << "| Instance Count | Total Size | " << heading << " |\n";
-    
+    std::multimap<size_t, std::string, std::greater<size_t> > sortedJavaObjects;
+
     for (it=javaObjects.begin(); it!=javaObjects.end(); ++it) {
         std::string name = (*it).first;
         name.resize(longestClassName, ' ');
@@ -71,7 +69,18 @@ void HeapStatsHashtable::print(std::ostream& os) const {
         
         std::string totalCount = std::to_string((*it).second.objectCount);
         totalCount.resize(14, ' ');
-     
-        os << "| " << totalCount << " | " << totalSize << " | " << name << " |\n";
+        
+        sortedJavaObjects.insert(std::pair<size_t, std::string>((*it).second.objectSize, "| " + totalCount + " | " + totalSize + " | " + name + " |\n"));
+    }
+    
+    std::multimap<size_t, std::string>::const_iterator ordered_it;
+    
+    std::string heading = "Class Name";
+    heading.resize(longestClassName, ' ');
+    
+    os << "| Instance Count | Total Size | " << heading << " |\n";
+    
+    for (ordered_it=sortedJavaObjects.begin(); ordered_it!=sortedJavaObjects.end(); ++ordered_it) {
+        os << (*ordered_it).second;
     }
 }
