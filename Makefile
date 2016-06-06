@@ -10,7 +10,9 @@ else
   LINK= -Wl,--no-as-needed,-soname=libJvmKill -static-libgcc
 endif
 
-CPPFLAGS=-Wall -Werror -fPIC -std=c++11 -shared -fno-strict-aliasing $(LINK) -fno-omit-frame-pointer $(INCLUDE)
+CPPFLAGS=-Wall -Werror -fPIC -std=c++11 -fno-strict-aliasing $(LINK) -fno-omit-frame-pointer $(INCLUDE)
+CPPFLAGS_SO=$(CPPFLAGS) -shared
+CPPFLAGS_TEST=$(CPPFLAGS) -ldl
 TARGET=libjvmkill.so
 
 .PHONY: all build clean alltests ctests threadtests threadtestbasic threadtest0 threadtest-10-2 memtests memtest0 memtest-10-2
@@ -19,7 +21,7 @@ all: build alltests
 
 build:
 	@echo "=============================================="
-	g++ $(CPPFLAGS) -o $(TARGET) jvmkill.c++ agentcontroller.c++ parametersparser.c++ threshold.c++ killaction.c++ heaphistogramaction.c++ heapstats.c++
+	g++ $(CPPFLAGS_SO) -o $(TARGET) jvmkill.c++ agentcontroller.c++ parametersparser.c++ threshold.c++ killaction.c++ heaphistogramaction.c++ heapstats.c++
 	chmod 644 $(TARGET)
 
 clean:
@@ -35,27 +37,27 @@ alltests: ctests threadtests memtests
 ctests: thresholdctests killactionctests agentcontrollerctests heaphistogramactionctests heapstatsctests parameterparserctests
 
 thresholdctests:
-	g++ -g -Wall -Werror $(INCLUDE) -ldl -o thresholdtests thresholdtests.c++ threshold.c++
+	g++ $(CPPFLAGS_TEST) -o thresholdtests thresholdtests.c++ threshold.c++
 	./thresholdtests
 
 killactionctests:
-	g++ -g -Wall -Werror $(INCLUDE) -ldl -o killactiontests killactiontests.c++ killaction.c++
+	g++ $(CPPFLAGS_TEST) -o killactiontests killactiontests.c++ killaction.c++
 	./killactiontests
 
 agentcontrollerctests:
-	g++ -g -Wall -Werror -Wno-unused-private-field $(INCLUDE) -ldl -o agentcontrollertests agentcontrollertests.c++ agentcontroller.c++
+	g++ $(CPPFLAGS_TEST) -o agentcontrollertests agentcontrollertests.c++ agentcontroller.c++
 	./agentcontrollertests
 
 heaphistogramactionctests:
-	g++ -g -std=c++11 -Wall -Werror $(INCLUDE) -ldl -o heaphistogramactiontests heaphistogramactiontests.c++ heaphistogramaction.c++
+	g++ $(CPPFLAGS_TEST) -o heaphistogramactiontests heaphistogramactiontests.c++ heaphistogramaction.c++
 	./heaphistogramactiontests
 
 heapstatsctests:
-	g++ -g -Wall -Werror $(INCLUDE) -ldl -o heapstatstests heapstatstests.c++ heapstats.c++
+	g++ $(CPPFLAGS_TEST) -o heapstatstests heapstatstests.c++ heapstats.c++
 	./heapstatstests
 
 parameterparserctests:
-	g++ -g -Wall -Werror $(INCLUDE) -ldl -o parameterparsertests parametersparsertests.c++ parametersparser.c++
+	g++ $(CPPFLAGS_TEST) -o parameterparsertests parametersparsertests.c++ parametersparser.c++
 	./parameterparsertests
 
 threadtests: threadtestbasic threadtest0 threadtest-10-2 threadtestpspawn-10-2
