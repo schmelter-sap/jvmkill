@@ -6,3 +6,4 @@ tests
 tests.*
 *tests
 *.dSYM
+CMakeLists.txt
