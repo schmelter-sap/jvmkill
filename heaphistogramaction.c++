@@ -124,7 +124,7 @@ jint HeapHistogramAction::heapReferenceCallback(jvmtiHeapReferenceKind reference
         fprintf(stderr, "heapReferenceCallback: class tag not found\n");
 	} else {
 		heapStats->recordObject(taggedClass[class_tag], size);
-		fprintf(stderr, "heapReferenceCallback for %s, length %ld\n", taggedClass[class_tag], size);		
+		fprintf(stderr, "heapReferenceCallback for %s, size %ld, length %d\n", taggedClass[class_tag], size, length);		
 	}
 
 	return JVMTI_VISIT_OBJECTS;
