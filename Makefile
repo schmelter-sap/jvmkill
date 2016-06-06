@@ -45,7 +45,7 @@ killactionctests:
 	./killactiontests
 
 agentcontrollerctests:
-	g++ $(CPPFLAGS_TEST) -o agentcontrollertests agentcontrollertests.c++ agentcontroller.c++
+	g++ $(CPPFLAGS_TEST) -Wno-unused-private-field -o agentcontrollertests agentcontrollertests.c++ agentcontroller.c++
 	./agentcontrollertests
 
 heaphistogramactionctests:
@@ -89,7 +89,7 @@ memtest0: build
 memtest-10-2: build
 	@echo "=============================================="
 	$(JAVA_HOME)/bin/javac JvmKillTest.java
-	($(JAVA_HOME)/bin/java -Xmx5m \
+	!($(JAVA_HOME)/bin/java -Xmx5m \
 	    -agentpath:$(PWD)/$(TARGET)=time=10,count=2,printHeapHistogram=1 \
 	    -cp $(PWD) JvmKillTest)
 
