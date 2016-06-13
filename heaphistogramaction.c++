@@ -65,6 +65,7 @@ void HeapHistogramAction::printHistogram(JNIEnv* jniEnv, std::ostream *outputStr
 
     // Print the histogram.
 	heapStats->print(*outputStream);
+
 	delete heapStats;
 	heapStats = NULL;
 }
@@ -79,7 +80,7 @@ void HeapHistogramAction::tagLoadedClasses(JNIEnv* jniEnv) {
     }
 
     for (int i = 0; i < classCount; i++) {
-    	tagLoadedClass(jniEnv, classes[i]);
+		tagLoadedClass(jniEnv, classes[i]);
     }
 }
 
@@ -119,7 +120,8 @@ jint HeapHistogramAction::heapReferenceCallback(jvmtiHeapReferenceKind reference
 	// For each object encountered, tag it so we can avoid visiting it again
 	// noting that the histogram is computed at most once in the lifetime of a JVM
 	*tag_ptr |= TAG_VISITED_MASK;
- 
+
+	// Add the object to the heap stats along with its class signature.
  	jlong unmaskedClassTag = class_tag & ~TAG_VISITED_MASK;
  	if (taggedClass.find(unmaskedClassTag) != taggedClass.end()) {
 		heapStats->recordObject(taggedClass[unmaskedClassTag], size);
@@ -133,20 +135,17 @@ HeapHistogramAction::HeapHistogramAction(jvmtiEnv *jvm, HeapStatsFactory* factor
 
 	/* Get/Add JVMTI capabilities */
 	int err = jvm->GetCapabilities(&capabilities);
-
-    if (err != JVMTI_ERROR_NONE) {
-    	fprintf(stderr, "ERROR: GetCapabilities failed: %d\n", err);
+	if (err != JVMTI_ERROR_NONE) {
+		fprintf(stderr, "ERROR: GetCapabilities failed: %d\n", err);
 		throw new std::runtime_error("GetCapabilities failed");
     }
+
 	capabilities.can_tag_objects = 1;
-	// capabilities.can_generate_garbage_collection_events = 1;
-	// capabilities.can_get_source_file_name = 1;
-	// capabilities.can_get_line_numbers = 1;
-	// capabilities.can_suspend = 1;
+
 	err = jvm->AddCapabilities(&capabilities);
 	if (err != JVMTI_ERROR_NONE) {
-      fprintf(stderr, "ERROR: AddCapabilities failed: %d\n", err);
-      throw new std::runtime_error("AddCapabilities failed");
+		fprintf(stderr, "ERROR: AddCapabilities failed: %d\n", err);
+		throw new std::runtime_error("AddCapabilities failed");
     }
 
 	jvmti = jvm;
@@ -162,8 +161,5 @@ HeapHistogramAction::~HeapHistogramAction() {
 }
 
 void HeapHistogramAction::act(JNIEnv* jniEnv) {
-	fprintf(stderr, "Printing Heap Histogram to standard output\n");
 	printHistogram(jniEnv, &(std::cout));
-	fprintf(stderr, "Printed Heap Histogram to standard output\n");
-
 }

@@ -61,6 +61,8 @@ jvmtiError (JNICALL MockGetLoadedClasses) (jvmtiEnv* env,
 }
 
 static int MockFollowReferencesCount;
+static jvmtiHeapReferenceCallback MockHeapReferenceCallback;
+static jint (*MockFollowReferencesAction)();
 static jvmtiError MockFollowReferencesReturnValue;
 jvmtiError (JNICALL MockFollowReferences) (jvmtiEnv* env,
   jint heap_filter,
@@ -69,16 +71,25 @@ jvmtiError (JNICALL MockFollowReferences) (jvmtiEnv* env,
   const jvmtiHeapCallbacks* callbacks,
   const void* user_data) {
 	MockFollowReferencesCount++;
+	MockHeapReferenceCallback = callbacks->heap_reference_callback;
+	if (MockFollowReferencesAction != NULL) {
+		(*MockFollowReferencesAction)();
+	}
+
   return MockFollowReferencesReturnValue;
 }
 
 static int MockGetClassSignatureCount;
+static char* MockGetClassSignatureResult;
 static jvmtiError MockGetClassSignatureReturnValue;
 jvmtiError (JNICALL MockGetClassSignature) (jvmtiEnv* env,
 	jclass klass,
 	char** signature_ptr,
 	char** generic_ptr) {
 	MockGetClassSignatureCount++;
+	if (MockGetClassSignatureResult != NULL) {
+		*signature_ptr = MockGetClassSignatureResult;		
+	}
 	return MockGetClassSignatureReturnValue;
 }
 
@@ -99,9 +110,11 @@ jvmtiError (JNICALL MockDeallocate) (jvmtiEnv* env,
 	return MockDeallocateReturnValue;
 }
 
+static int MockRecordObjectCount;
 static const char* MockRecordObjectClassName;
 static size_t MockRecordObjectSize;
 static int MockPrintCount;
+const jlong VISITED_OBJECT = 1 << 31;
 
 class MockHeapStats: public HeapStats {
 public:
@@ -109,6 +122,7 @@ public:
    virtual ~MockHeapStats() {}
 
    void recordObject(const char *className, size_t objectSize) {
+   	MockRecordObjectCount++;
      MockRecordObjectClassName = className;
      MockRecordObjectSize = objectSize;
    }
@@ -132,7 +146,9 @@ public:
 static MockHeapStatsFactory* MockHSFactory;
 
 void setup() {
-	mockJNIEnv = 0; // FIXME
+	heapHistogramAction = NULL;
+
+	mockJNIEnv = 0;
 
 	mockJvmtiEnvStruct.functions = &mockJvmtiInterface_1_;
 
@@ -152,6 +168,7 @@ void setup() {
 	((struct jvmtiInterface_1_ *)mockJvmtiEnvStruct.functions)->SetTag = &MockSetTag;
 
 	MockGetClassSignatureCount = 0;
+	MockGetClassSignatureResult = NULL;
 	MockGetClassSignatureReturnValue = JVMTI_ERROR_NONE;
 	((struct jvmtiInterface_1_ *)mockJvmtiEnvStruct.functions)->GetClassSignature = &MockGetClassSignature;
 
@@ -159,24 +176,29 @@ void setup() {
 	MockDeallocateReturnValue = JVMTI_ERROR_NONE;
 	((struct jvmtiInterface_1_ *)mockJvmtiEnvStruct.functions)->Deallocate = &MockDeallocate;
 
+	MockFollowReferencesCount = 0;
 	MockFollowReferencesReturnValue = JVMTI_ERROR_NONE;
+	MockFollowReferencesAction = NULL;
 	((struct jvmtiInterface_1_ *)mockJvmtiEnvStruct.functions)->FollowReferences = &MockFollowReferences;
-
 
 	mockJvmtiEnv = &mockJvmtiEnvStruct;
 
 	MockHSFactory = new MockHeapStatsFactory();
+	MockRecordObjectCount = 0;
 	MockPrintCount = 0;
 }
 
 void teardown() {
-	// placeholder in case setup acquires resources
+	if (heapHistogramAction != NULL) {		
+		delete heapHistogramAction;
+	}
 }
 
 bool testConstructionOk() {
 	setup();
 
 	heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv, MockHSFactory);
+
 	bool passed = (MockGetCapabilitiesCount == 1) &&
 					(MockAddCapabilitiesCount == 1) &&
 					(MockAddedCapabilities.can_tag_objects == 1);
@@ -185,7 +207,6 @@ bool testConstructionOk() {
 		fprintf(stdout, "testConstruction FAILED\n");
 	}
 
-	delete(heapHistogramAction);
 	teardown();
 	return passed;
 }
@@ -230,11 +251,6 @@ bool testConstructionAddCapabilitiesFailure() {
 	return passed;
 }
 
-// TODO: need to return at least one loaded class and test that
-// HeapHistogramAction::tagLoadedClass works correctly, i.e. that
-// GetClassSignature and SetTag are called correctly.
-//
-// TODO: add two more test methods for when GetClassSignature or SetTag fails
 bool testHeapStatsPrintOk() {
 	setup();
 	MockGetLoadedClassesResultantClassCount = 0;
@@ -275,16 +291,36 @@ bool testHeapStatsGetLoadedClassesFailure() {
 	return passed;
 }
 
+bool testFollowReferencesFailure() {
+	setup();
+	MockGetLoadedClassesResultantClassCount = 0;
+	MockFollowReferencesReturnValue = JVMTI_ERROR_ACCESS_DENIED;
+
+	heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv, MockHSFactory);
+
+    bool passed = false;
+	try {
+		heapHistogramAction->act(mockJNIEnv);
+    } catch (std::runtime_error *re) {
+    	passed = (MockFollowReferencesCount == 1);
+	}
+
+	if (!passed) {
+		fprintf(stdout, "testFollowReferencesFailure FAILED\n");
+	}
+
+	teardown();
+	return passed;
+}
+
 bool testHeapStatsTagsClassesReturnedByGetLoadedClasses() {
 	setup();
-	MockGetLoadedClassesReturnValue = JVMTI_ERROR_NONE;
-  MockGetLoadedClassesResultantClassCount = 2;
+	MockGetLoadedClassesResultantClassCount = 2;
 	MockGetLoadedClassesResultantClasses = new jclass[2];
 	heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv, MockHSFactory);
 
-  bool passed = false;
 	heapHistogramAction->act(mockJNIEnv);
-	passed = ((MockSetTagTagsSet[0] == 1) &&
+	bool passed = ((MockSetTagTagsSet[0] == 1) &&
 						(MockSetTagTagsSet[1] == 2));
 
 	if (!passed) {
@@ -296,14 +332,157 @@ bool testHeapStatsTagsClassesReturnedByGetLoadedClasses() {
 	return passed;
 }
 
+bool testHeapRefCallback() {
+	setup();
+
+	heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv, MockHSFactory);
+	heapHistogramAction->act(mockJNIEnv);
+
+	jlong tag = 0;
+	jint heapVisitControlFlags = (*MockHeapReferenceCallback)(JVMTI_HEAP_REFERENCE_CLASS,
+																NULL,
+																0,
+																0,
+																0,
+																&tag,
+																NULL,
+																0,
+																heapHistogramAction);
+	bool passed = heapVisitControlFlags == JVMTI_VISIT_OBJECTS;
+
+	if (!passed) {
+		fprintf(stdout, "heapVisitControlFlags, expected %d, found %d\n", JVMTI_VISIT_OBJECTS, heapVisitControlFlags);
+		fprintf(stdout, "testHeapRefCallback FAILED\n");
+	}
+
+	teardown();
+	return passed;
+}
+
+bool testHeapRefCallbackNoVisit() {
+	setup();
+
+	MockGetLoadedClassesResultantClassCount = 0;
+
+	heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv, MockHSFactory);
+	heapHistogramAction->act(mockJNIEnv);
+
+	jlong tag = VISITED_OBJECT;
+	jint heapVisitControlFlags = (*MockHeapReferenceCallback)(JVMTI_HEAP_REFERENCE_CLASS,
+																NULL,
+																0,
+																0,
+																0,
+																&tag,
+																NULL,
+																0,
+																heapHistogramAction);
+	bool passed = heapVisitControlFlags == 0;
+
+	if (!passed) {
+		fprintf(stdout, "testHeapRefCallbackNoVisit, expected %d, found %d\n", 0, heapVisitControlFlags);
+		fprintf(stdout, "testHeapRefCallbackNoVisit FAILED\n");
+	}
+
+	teardown();
+	return passed;
+}
+
+bool testGetClassSignatureFailure() {
+	setup();
+
+	heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv, MockHSFactory);
+
+    bool passed = false;
+	try {
+		MockGetClassSignatureReturnValue = JVMTI_ERROR_ACCESS_DENIED;
+		MockGetLoadedClassesResultantClassCount = 2;
+	    MockGetLoadedClassesResultantClasses = new jclass[2];
+		heapHistogramAction->act(mockJNIEnv);
+    } catch (std::runtime_error *re) {
+    	passed = (MockGetClassSignatureCount == 1);
+	}
+
+	if (!passed) {
+		fprintf(stdout, "testGetClassSignatureFailure FAILED\n");
+	}
+
+	teardown();
+	return passed;
+}
+
+bool testSetTagOnClassFailure() {
+	setup();
+
+	heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv, MockHSFactory);
+
+    bool passed = false;
+	try {
+		MockSetTagReturnValue = JVMTI_ERROR_ACCESS_DENIED;
+		MockGetLoadedClassesResultantClassCount = 2;
+	    MockGetLoadedClassesResultantClasses = new jclass[2];
+		heapHistogramAction->act(mockJNIEnv);
+    } catch (std::runtime_error *re) {
+    	passed = (MockGetClassSignatureCount == 1);
+	}
+
+	if (!passed) {
+		fprintf(stdout, "testSetTagOnClassFailure FAILED\n");
+	}
+
+	teardown();
+	return passed;
+}
+
+jint followReferencesAction() {
+	jlong classTag = MockSetTagTagsSet[0];
+	jlong tag = 0;
+	return (*MockHeapReferenceCallback)(JVMTI_HEAP_REFERENCE_CLASS,
+										NULL,
+										classTag,
+										0,
+										0,
+										&tag,
+										NULL,
+										0,
+										heapHistogramAction);
+}
+
+bool testHeapReferenceCallbackCallsRecordObject() {
+	setup();
+
+	heapHistogramAction = new HeapHistogramAction(mockJvmtiEnv, MockHSFactory);
+
+	MockGetLoadedClassesResultantClassCount = 1;
+	MockGetLoadedClassesResultantClasses = new jclass[1];
+	MockGetClassSignatureResult = (char*)"test-signature";
+	MockFollowReferencesAction = &followReferencesAction;
+
+	heapHistogramAction->act(mockJNIEnv);
+
+    bool passed = (MockRecordObjectCount == 1);
+
+	if (!passed) {
+		fprintf(stdout, "testHeapReferenceCallbackCallsRecordObject FAILED\n");
+	}
+
+	teardown();
+	return passed;
+}
 
 int main() {
 	bool result = (testConstructionOk() &&
 						testConstructionGetCapabilitiesFailure() &&
 						testConstructionAddCapabilitiesFailure() &&
 						testHeapStatsPrintOk() &&
+						testFollowReferencesFailure() &&
 						testHeapStatsTagsClassesReturnedByGetLoadedClasses() &&
-						testHeapStatsGetLoadedClassesFailure());
+						testHeapStatsGetLoadedClassesFailure() &&
+						testHeapRefCallback() &&
+						testHeapRefCallbackNoVisit() &&
+						testGetClassSignatureFailure() &&
+						testSetTagOnClassFailure() &&
+						testHeapReferenceCallbackCallsRecordObject());
 	if (result) {
        fprintf(stdout, "SUCCESS\n");
 	   exit(EXIT_SUCCESS);
