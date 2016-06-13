@@ -19,6 +19,8 @@
 #include <unistd.h>
 #include <iostream>
 #include <unordered_map>
+#include <algorithm>
+#include <vector>
 #include <map>
 
 #include "heapstatshashtable.h"
@@ -47,40 +49,32 @@ void HeapStatsHashtable::recordObject(const char *className, size_t objectSize) 
         objectSize = javaObjects.at(classNameString).objectSize + objectSize;
         objectCount = javaObjects.at(classNameString).objectCount + objectCount;
         javaObjects.erase(classNameString);
-    }
-    if(classNameString.length() > longestClassName) {
+    } else if(classNameString.length() > longestClassName) {
         longestClassName = classNameString.length();
     }
-    ObjectCount tmpCount = {objectSize, objectCount};
-    javaObjects.insert (std::pair<std::string, ObjectCount>(classNameString, tmpCount) );
+    javaObjects.insert (std::pair<std::string, ObjectCount>(classNameString, {objectSize, objectCount}) );
+}
+
+bool sorter (std::pair<std::string, ObjectCount> i, std::pair<std::string, ObjectCount> j) { 
+    return (i.second.objectSize > j.second.objectSize); 
 }
 
 void HeapStatsHashtable::print(std::ostream& os) const {
-    
-    std::unordered_map<std::string, ObjectCount>::const_iterator it;
-    std::multimap<size_t, std::string, std::greater<size_t> > sortedJavaObjects;
+    std::vector<std::pair<std::string, ObjectCount> > tmpObjects(javaObjects.begin(), javaObjects.end());    
+    std::sort(tmpObjects.begin(), tmpObjects.end(), sorter);
 
-    for (it=javaObjects.begin(); it!=javaObjects.end(); ++it) {
-        std::string name = (*it).first;
-        name.resize(longestClassName, ' ');
-        
+    std::string heading = "Class Name";
+    heading.resize(longestClassName, ' ');
+    os << "| Instance Count | Total Bytes | " << heading << " |\n";
+    
+    for (std::vector<std::pair<std::string, ObjectCount> >::iterator it=tmpObjects.begin(); it!=tmpObjects.end(); it++) {        
+        (*it).first.resize(longestClassName, ' ');
         std::string totalSize = std::to_string((*it).second.objectSize);
-        totalSize.resize(10, ' ');
-        
+        totalSize.resize(11, ' ');    
         std::string totalCount = std::to_string((*it).second.objectCount);
         totalCount.resize(14, ' ');
         
-        sortedJavaObjects.insert(std::pair<size_t, std::string>((*it).second.objectSize, "| " + totalCount + " | " + totalSize + " | " + name + " |\n"));
+        os << "| " << totalCount << " | " << totalSize << " | " << (*it).first << " |\n";
     }
     
-    std::multimap<size_t, std::string>::const_iterator ordered_it;
-    
-    std::string heading = "Class Name";
-    heading.resize(longestClassName, ' ');
-    
-    os << "| Instance Count | Total Size | " << heading << " |\n";
-    
-    for (ordered_it=sortedJavaObjects.begin(); ordered_it!=sortedJavaObjects.end(); ++ordered_it) {
-        os << (*ordered_it).second;
-    }
 }

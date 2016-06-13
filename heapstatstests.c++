@@ -54,8 +54,8 @@ bool testSingleRecordAndPrint() {
     tHeapStats.recordObject(test_class_name_1, 24);
     tHeapStats.print(ss);
     
-    const std::string expected ("| Instance Count | Total Size | Class Name       |\n"
-                                "| 1              | 24         | java.lang.Object |\n");
+    const std::string expected ("| Instance Count | Total Bytes | Class Name       |\n"
+                                "| 1              | 24          | java.lang.Object |\n");
     
     bool result = verify ("testSingleRecordAndPrint", expected.c_str(), ss.str().c_str());
     teardown();
@@ -71,9 +71,9 @@ bool testMultiRecordAndPrint() {
     tHeapStats.recordObject(test_class_name_2, 36);
     tHeapStats.print(ss);
     
-    const std::string expected ("| Instance Count | Total Size | Class Name                   |\n"
-                                "| 1              | 36         | java.lang.long.longer.String |\n"
-                                "| 1              | 24         | java.lang.Object             |\n");
+    const std::string expected ("| Instance Count | Total Bytes | Class Name                   |\n"
+                                "| 1              | 36          | java.lang.long.longer.String |\n"
+                                "| 1              | 24          | java.lang.Object             |\n");
     
     bool result = verify ("testMultiRecordAndPrint", expected.c_str(), ss.str().c_str());
     teardown();
@@ -90,9 +90,9 @@ bool testDuplicateRecordAndPrint() {
     tHeapStats.recordObject(test_class_name_2, 32);
     tHeapStats.print(ss);
     
-    const std::string expected ("| Instance Count | Total Size | Class Name                   |\n"
-                                "| 2              | 50         | java.lang.Object             |\n"
-                                "| 1              | 32         | java.lang.long.longer.String |\n");
+    const std::string expected ("| Instance Count | Total Bytes | Class Name                   |\n"
+                                "| 2              | 50          | java.lang.Object             |\n"
+                                "| 1              | 32          | java.lang.long.longer.String |\n");
     
     bool result = verify ("testDuplicateRecordAndPrint", expected.c_str(), ss.str().c_str());
     teardown();
