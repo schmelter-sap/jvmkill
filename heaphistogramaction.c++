@@ -12,6 +12,7 @@
  * limitations under the License.
  */
 
+#include <limits.h>
 #include <sys/types.h>
 #include <signal.h>
 #include <stdexcept>
@@ -24,9 +25,8 @@
 #include "heaphistogramaction.h"
 #include "heapstats.h"
 
-// Pick a suitable object tag, use 1L for now
-// but see http://stackoverflow.com/questions/37439576/are-object-tags-set-by-the-jvm-visible-to-jvmti-agents
-const jlong TAG_VISITED = 1;
+// Pick a suitable object tag and avoid using that to tag classes.
+const jlong TAG_VISITED = LONG_MAX;
 
 jint (JNICALL heapRefCallback)(jvmtiHeapReferenceKind reference_kind, 
      const jvmtiHeapReferenceInfo* reference_info, 
