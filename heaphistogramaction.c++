@@ -25,8 +25,8 @@
 #include "heaphistogramaction.h"
 #include "heapstats.h"
 
-// Pick a suitable object tag and avoid using that to tag classes.
-const jlong TAG_VISITED = LONG_MAX;
+// Pick a suitable object tag mask greater than tags used to tag classes.
+const jlong TAG_VISITED_MASK = 1 << 31;
 
 jint (JNICALL heapRefCallback)(jvmtiHeapReferenceKind reference_kind, 
      const jvmtiHeapReferenceInfo* reference_info, 
@@ -112,16 +112,17 @@ jint HeapHistogramAction::heapReferenceCallback(jvmtiHeapReferenceKind reference
      jlong* tag_ptr, 
      jlong* referrer_tag_ptr, 
      jint length) {
-	if (*tag_ptr == TAG_VISITED) {
+	if (*tag_ptr & TAG_VISITED_MASK) {
 		return 0;
 	}
 
 	// For each object encountered, tag it so we can avoid visiting it again
 	// noting that the histogram is computed at most once in the lifetime of a JVM
-	*tag_ptr = TAG_VISITED;
+	*tag_ptr |= TAG_VISITED_MASK;
  
- 	if (taggedClass.find(class_tag) != taggedClass.end()) {
-		heapStats->recordObject(taggedClass[class_tag], size);
+ 	jlong unmaskedClassTag = class_tag & ~TAG_VISITED_MASK;
+ 	if (taggedClass.find(unmaskedClassTag) != taggedClass.end()) {
+		heapStats->recordObject(taggedClass[unmaskedClassTag], size);
 	}
 
 	return JVMTI_VISIT_OBJECTS;
