@@ -23,7 +23,7 @@
 
 #include "heapstatshashtable.h"
 
-int longestClassName = 10;
+unsigned int longestClassName = 10;
 
 struct ObjectCount {
     size_t objectSize;
