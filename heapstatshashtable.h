@@ -11,28 +11,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+ 
+#ifndef heapstatshashtable_h
+#define heapstatshashtable_h
 
-#ifndef threshold_h
-#define threshold_h
+#include "heapstats.h"
 
-#include "heuristic.h"
-#include "parameters.h"
-
-class Threshold: public Heuristic
-{
+class HeapStatsHashtable: public HeapStats {
 public:
-   Threshold(AgentParameters param);
+    HeapStatsHashtable();
+    virtual ~HeapStatsHashtable();
 
-   bool onOOM();
+    void recordObject(const char *className, size_t objectSize);
+  
+    void print(std::ostream& os) const;
+
 private:
-   // circular buffer containing the timestamps of up to count_threshold + 1 OOMs
-   long *events;
-   int eventIndex;
-   AgentParameters parameters;
-
-   void addEvent();
-   int countEvents();
-   long getMillisLimit();
 };
 
-#endif // threshold_h
+class HeapStatsHashtableFactory: public HeapStatsFactory {
+public:
+    HeapStatsHashtableFactory() {}
+
+    virtual ~HeapStatsHashtableFactory() {}
+
+    HeapStats* create() {
+        return new HeapStatsHashtable();
+    }
+};
+
+#endif // heapstatshashtable_h

@@ -15,10 +15,12 @@
 #ifndef action_h
 #define action_h
 
+#include <jni.h>
+
 class Action
 {
 public:
-   virtual void act() = 0;
+   virtual void act(JNIEnv* jniEnv) = 0;
 };
 
 #endif // action_h

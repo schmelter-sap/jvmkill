@@ -18,6 +18,7 @@
 #include "action.h"
 #include "killaction.h"
 
+JNIEnv* mockJNIEnv;
 
 Action *action;
 const int moddedSignal = SIGUSR1;
@@ -37,6 +38,7 @@ void setup() {
     KillAction *killAction = new KillAction();
     killAction->setSignal(moddedSignal);
     action = killAction;
+    mockJNIEnv = 0;
 }
 
 void teardown() {
@@ -47,7 +49,7 @@ void teardown() {
 bool testSendsSignal() {
 	sigQuit_sent = false;
 
-	action->act();
+	action->act(mockJNIEnv);
 
 	if (!sigQuit_sent) {
        fprintf(stdout, "testSendsSignal FAILED\n");

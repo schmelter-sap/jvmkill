@@ -20,20 +20,9 @@
 
 #include <jvmti.h>
 
-/**
- * Configuration struct that holds agent configuration 
- */
-struct Configuration {
-   int signal; 
-};
 #ifdef __cplusplus
 extern "C" {
 #endif
-/*
- * function for overriding unix signal sent when the threshold is reached
- * === Mainly used on unit tests ===
- */
-void setSignal(int signal); 
 
 /*
  * resourceExhausted callback registered in the JVM
@@ -43,15 +32,15 @@ void resourceExhausted(
       JNIEnv *jni_env,
       jint flags,
       const void *reserved,
-      const char *description); 
+      const char *description);
 
-int getTime_Threshold(); 
-int getCount_Threshold(); 
+int getTime_Threshold();
+int getCount_Threshold();
 
 /*
  * function that parses agent parameters
  */
-void setParameters(char *options); 
+void setParameters(char *options);
 #ifdef __cplusplus
 }
 #endif
@@ -60,4 +49,4 @@ void setParameters(char *options);
  * Agent load callback called by the JVM
  */
 JNIEXPORT jint JNICALL
-Agent_OnLoad(JavaVM *vm, char *options, void *reserved); 
+Agent_OnLoad(JavaVM *vm, char *options, void *reserved);
