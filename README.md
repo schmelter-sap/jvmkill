@@ -1,4 +1,4 @@
-[Concourse Pipeline][https://java-experience.ci.springapps.io/pipelines/jvmkill]
+[Concourse Pipeline](https://java-experience.ci.springapps.io/pipelines/jvmkill)
 
 # Overview
 
