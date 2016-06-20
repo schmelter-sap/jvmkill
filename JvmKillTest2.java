@@ -22,7 +22,7 @@ public final class JvmKillTest2
     public static void main(String[] args)
             throws Exception
     {
-        System.out.println("triggering OutOfMemmoryError due to thread exhaustion...");
+        System.out.println("triggering OutOfMemoryError due to thread exhaustion...");
         List<Thread> list = new ArrayList<>();
         try {
             for (int n = 0; n < MAXNUM; ++n) {
