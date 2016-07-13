@@ -11,3 +11,11 @@ inputs:
 
 run:
   path: jvmkill/ci/build.sh
+
+params:
+  ARTIFACTORY_REPOSITORY: libs-snapshot-local
+  PLATFORM:               trusty
+  VERSION:                1.0.0.BUILD-SNAPSHOT
+
+  ARTIFACTORY_USERNAME:
+  ARTIFACTORY_PASSWORD:

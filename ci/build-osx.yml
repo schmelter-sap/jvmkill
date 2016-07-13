@@ -4,8 +4,15 @@ platform: darwin
 inputs:
 - name: jvmkill
 
+run:
+  path: jvmkill/ci/build.sh
+
 params:
   JAVA_HOME: /Library/Java/JavaVirtualMachines/jdk1.8.0_77.jdk/Contents/Home
 
-run:
-  path: jvmkill/ci/build.sh
+  ARTIFACTORY_REPOSITORY: libs-snapshot-local
+  PLATFORM:               darwin
+  VERSION:                1.0.0.BUILD-SNAPSHOT
+
+  ARTIFACTORY_USERNAME:
+  ARTIFACTORY_PASSWORD:
