@@ -1,6 +1,7 @@
 FROM java:8-jdk
 
 RUN apt-get update && apt-get install -y \
+    gcc-4.7 \
     build-essential \
     jq \
     python-pip \
