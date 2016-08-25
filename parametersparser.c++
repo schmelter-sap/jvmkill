@@ -21,6 +21,12 @@
 
 #include "parametersparser.h"
 
+const int DEFAULT_COUNT_THRESHOLD = 0;
+const int DEFAULT_TIME_THRESHOLD = 1;
+const int DEFAULT_PRINT_HEAP_HISTOGRAM = 0;
+const char* HEX_CHARS = "0123456789ABCDEF";
+
+
 enum {
     TIME_OPT = 0,
     COUNT_OPT,
@@ -35,6 +41,26 @@ char *tokens[] = {
     [THE_END] = NULL
 };
 
+void checkValueProvided(char *value, int option) {
+   if (value == NULL) {
+      fprintf(stderr, "Suboption '%s=<value>' did not have a value\n", tokens[option]);
+      abort();
+   }
+}
+
+char* toHex(char* s) {
+   int len = strlen(s);
+   char *result = new char[len * 2 + 1];
+
+   for (int i = 0; i < len; i++) {
+     char c = s[i];
+     result[2 * i] = HEX_CHARS[(c >> 4) & 0xF];
+     result[2 * i + 1] = HEX_CHARS[c & 0xF];
+   }
+
+   result[len * 2] = NULL;
+   return result;
+}
 
 ParametersParser::ParametersParser() {
 }
@@ -42,9 +68,9 @@ ParametersParser::ParametersParser() {
 AgentParameters ParametersParser::parse(char *options) {
   AgentParameters result;
   //sets defaults
-  result.count_threshold = 0;
-  result.time_threshold = 1;
-  result.print_heap_histogram = 0;
+  result.count_threshold = DEFAULT_COUNT_THRESHOLD;
+  result.time_threshold = DEFAULT_TIME_THRESHOLD;
+  result.print_heap_histogram = DEFAULT_PRINT_HEAP_HISTOGRAM;
 
   if (options != NULL) {
      // Copy input options since getsubopt modifies its input
@@ -54,25 +80,31 @@ AgentParameters ParametersParser::parse(char *options) {
      char *value;
 
      while (*subopts != '\0') {
-        switch (getsubopt (&subopts, tokens, &value)) {
+        switch (getsubopt(&subopts, tokens, &value)) {
            case COUNT_OPT:
-              if (value == NULL)
-                 abort ();
-              result.count_threshold = atoi (value);
+              checkValueProvided(value, COUNT_OPT);
+              result.count_threshold = (strlen(value) == 0) ? DEFAULT_COUNT_THRESHOLD : atoi(value);
               break;
 
            case TIME_OPT:
-              if (value == NULL)
-                 abort ();
-              result.time_threshold = atoi (value);
+              checkValueProvided(value, TIME_OPT);
+              result.time_threshold = (strlen(value) == 0) ? DEFAULT_TIME_THRESHOLD : atoi(value);
               break;
+
           case PRINT_HEAP_HISTOGRAM_OPT:
-              if (value == NULL)
-                 abort ();
-              result.print_heap_histogram = atoi (value);
+              checkValueProvided(value, PRINT_HEAP_HISTOGRAM_OPT);
+              result.print_heap_histogram = (strlen(value) == 0) ? DEFAULT_PRINT_HEAP_HISTOGRAM : atoi(value);
               break;
+
           default:
-              fprintf (stderr, "Unknown suboption '%s'\n", value);
+              // Print the unrecognised option name and value. On Darwin, value omits the option name.
+              fprintf(stderr, "Unknown suboption '%s' (hex '%s')\n", value, toHex(value));
+              fprintf(stderr, "Valid suboptions are:\n");
+              for (int i = TIME_OPT; i < THE_END; i++) {
+                 char* option = tokens[i];
+                 fprintf(stderr, "  '%s' (hex '%s')\n", option, toHex(option));
+              }
+              abort();
               break;
         }
      }
