@@ -58,7 +58,7 @@ char* toHex(char* s) {
      result[2 * i + 1] = HEX_CHARS[c & 0xF];
    }
 
-   result[len * 2] = NULL;
+   result[len * 2] = '\0';
    return result;
 }
 
