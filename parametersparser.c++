@@ -24,8 +24,6 @@
 const int DEFAULT_COUNT_THRESHOLD = 0;
 const int DEFAULT_TIME_THRESHOLD = 1;
 const int DEFAULT_PRINT_HEAP_HISTOGRAM = 0;
-const char* HEX_CHARS = "0123456789ABCDEF";
-
 
 enum {
     TIME_OPT = 0,
@@ -46,20 +44,6 @@ void checkValueProvided(char *value, int option) {
       fprintf(stderr, "Suboption '%s=<value>' did not have a value\n", tokens[option]);
       abort();
    }
-}
-
-char* toHex(char* s) {
-   int len = strlen(s);
-   char *result = new char[len * 2 + 1];
-
-   for (int i = 0; i < len; i++) {
-     char c = s[i];
-     result[2 * i] = HEX_CHARS[(c >> 4) & 0xF];
-     result[2 * i + 1] = HEX_CHARS[c & 0xF];
-   }
-
-   result[len * 2] = '\0';
-   return result;
 }
 
 ParametersParser::ParametersParser() {
@@ -97,14 +81,9 @@ AgentParameters ParametersParser::parse(char *options) {
               break;
 
           default:
-              // Print the unrecognised option name and value. On Darwin, value omits the option name.
-              fprintf(stderr, "Unknown suboption '%s' (hex '%s')\n", value, toHex(value));
-              fprintf(stderr, "Valid suboptions are:\n");
-              for (int i = TIME_OPT; i < THE_END; i++) {
-                 char* option = tokens[i];
-                 fprintf(stderr, "  '%s' (hex '%s')\n", option, toHex(option));
-              }
-              abort();
+              // Print the unrecognised option name and value.
+              // Note: Darwin's getsubopt omits the option name and equals sign from value in this case.
+              fprintf(stderr, "Unknown suboption '%s'\n", value);
               break;
         }
      }
