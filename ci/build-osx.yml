@@ -8,7 +8,7 @@ run:
   path: jvmkill/ci/build.sh
 
 params:
-  JAVA_HOME: /Library/Java/JavaVirtualMachines/jdk1.8.0_77.jdk/Contents/Home
+  JAVA_HOME: /Library/Java/JavaVirtualMachines/jdk1.8.0_101.jdk/Contents/Home
 
   ARTIFACTORY_REPOSITORY: libs-snapshot-local
   PLATFORM:               darwin
