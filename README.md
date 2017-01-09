@@ -52,3 +52,8 @@ To enable histogram printing, set the parameter to 1. Defaults to 0 (disabled) i
 ## time
 Configures the time limit (in seconds) in which resourceExhausted events are kept in 
 the counter. Defaults to 1 if not provided.
+
+## License
+
+The jvmkill agent is Open Source software released under the
+[Apache 2.0 license](http://www.apache.org/licenses/LICENSE-2.0.html).
