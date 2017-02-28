@@ -17,6 +17,8 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
 #include "heapstatshashtable.h"
 
@@ -119,8 +121,56 @@ bool testSortAndPrint() {
     return result;
 }
 
+bool testLargeSortAndPrint() {
+    setup();
+    HeapStatsHashtable tHeapStats = *heapStats;
+    std::stringstream ss;
+
+    // Read test data and record corresponding objects.
+    std::ifstream infile("fixtures/large.txt");
+    size_t instanceCount, totalSize;
+    std::string className;
+    while (infile >> instanceCount >> totalSize >> className) {
+      size_t instanceSize = totalSize / instanceCount;
+
+      for (int i = 0; i < instanceCount; i++) {
+          tHeapStats.recordObject(className.c_str(), instanceSize);
+      }
+    }
+
+    // Print the histogram and capture the output.
+    tHeapStats.print(ss);
+
+    // Detect any lines which are out of order.
+    bool result = true;
+    std::string line;
+    bool first = true;
+    size_t prevTotal = (size_t)-1;
+    while (std::getline(ss, line)) {
+        size_t start_pos = 0;
+        while((start_pos = line.find("|", start_pos)) != std::string::npos) {
+                 line.replace(start_pos, 1, " ");
+                 start_pos += 1;
+        }
+
+        if (!first) {
+            std::istringstream iss(line);
+            if (!(iss >> instanceCount >> totalSize >> className)) { break; }
+            if (totalSize > prevTotal) {
+                std::cout << "Failed. Histogram is not sorted. " << prevTotal << " should be greater than or equal to " << totalSize << "\n";
+                result = false;
+            }
+            prevTotal = totalSize;
+        }
+        first = false;
+    }
+
+    teardown();
+    return result;
+}
+
 int main() {
-    bool result = testSingleRecordAndPrint() && testMultiRecordAndPrint() && testDuplicateRecordAndPrint() && testSortAndPrint();
+    bool result = testSingleRecordAndPrint() && testMultiRecordAndPrint() && testDuplicateRecordAndPrint() && testSortAndPrint() && testLargeSortAndPrint();
     if (result) {    	
         fprintf(stdout, "SUCCESS\n");
         exit(EXIT_SUCCESS);
