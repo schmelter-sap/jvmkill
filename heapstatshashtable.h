@@ -18,6 +18,15 @@
 #define heapstatshashtable_h
 
 #include "heapstats.h"
+#include <unordered_map>
+#include <algorithm>
+#include <vector>
+#include <map>
+
+struct ObjectCount {
+    size_t objectSize;
+    size_t objectCount;
+};
 
 class HeapStatsHashtable: public HeapStats {
 public:
@@ -29,6 +38,8 @@ public:
     void print(std::ostream& os) const;
 
 private:
+    std::unordered_map<std::string, ObjectCount> javaObjects;
+    unsigned int longestClassName = 10;
 };
 
 class HeapStatsHashtableFactory: public HeapStatsFactory {

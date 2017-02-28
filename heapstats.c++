@@ -20,21 +20,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <iostream>
-#include <unordered_map>
-#include <algorithm>
-#include <vector>
-#include <map>
 
 #include "heapstatshashtable.h"
-
-unsigned int longestClassName = 10;
-
-struct ObjectCount {
-    size_t objectSize;
-    size_t objectCount;
-};
-
-std::unordered_map<std::string, ObjectCount> javaObjects;
 
 HeapStatsHashtable::HeapStatsHashtable() {
 }
@@ -78,5 +65,4 @@ void HeapStatsHashtable::print(std::ostream& os) const {
         
         os << "| " << totalCount << " | " << totalSize << " | " << (*it).first << " |\n";
     }
-    
 }

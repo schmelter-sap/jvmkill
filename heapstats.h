@@ -40,12 +40,6 @@ public:
     virtual void print(std::ostream& os) const = 0;
 };
 
-// Bind the stream output operator to the HeapStats print method.
-//std::ostream& operator<<(std::ostream& os, const HeapStats& hs) {
-//    hs.print(os);
-//    return os;
-//}
-
 class HeapStatsFactory {
 public:
     // Destructor
