@@ -101,8 +101,26 @@ bool testDuplicateRecordAndPrint() {
     return result;
 }
 
+bool testSortAndPrint() {
+    setup();
+    HeapStatsHashtable tHeapStats = *heapStats;
+    std::stringstream ss;
+
+    tHeapStats.recordObject(test_class_name_2, 937072);
+    tHeapStats.recordObject(test_class_name_1, 96);
+    tHeapStats.print(ss);
+
+    const std::string expected ("| Instance Count | Total Bytes | Class Name                   |\n"
+                                "| 1              | 937072      | java.lang.long.longer.String |\n"
+                                "| 1              | 96          | java.lang.Object             |\n");
+
+    bool result = verify ("testSortAndPrint", expected.c_str(), ss.str().c_str());
+    teardown();
+    return result;
+}
+
 int main() {
-    bool result = testSingleRecordAndPrint() && testMultiRecordAndPrint() && testDuplicateRecordAndPrint();
+    bool result = testSingleRecordAndPrint() && testMultiRecordAndPrint() && testDuplicateRecordAndPrint() && testSortAndPrint();
     if (result) {    	
         fprintf(stdout, "SUCCESS\n");
         exit(EXIT_SUCCESS);
