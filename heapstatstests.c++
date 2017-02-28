@@ -133,7 +133,7 @@ bool testLargeSortAndPrint() {
     while (infile >> instanceCount >> totalSize >> className) {
       size_t instanceSize = totalSize / instanceCount;
 
-      for (int i = 0; i < instanceCount; i++) {
+      for (size_t i = 0; i < instanceCount; i++) {
           tHeapStats.recordObject(className.c_str(), instanceSize);
       }
     }
