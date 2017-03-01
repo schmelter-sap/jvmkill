@@ -47,7 +47,19 @@ time interval. Defaults to 0 if not provided (JVM is killed with a single fired 
 ## printHeapHistogram
 
 Determines whether or not a histogram of heap usage is printed before the agent kills the JVM.
-To enable histogram printing, set the parameter to 1. Defaults to 0 (disabled) if not provided. 
+To enable histogram printing, set the parameter to 1. Defaults to 0 (disabled) if not provided.
+
+Each entry in the histogram describes the number of instances of a particular Java type, the
+total number of bytes in the heap consumed by those instances, and the name of the type.
+
+The histogram is sorted in order of decreasing total number of bytes.
+
+The histogram may be truncated. To set the number of entries that appear, use the `heapHistogramMaxEntries` parameter.
+ 
+## heapHistogramMaxEntries
+
+When histogram printing is enabled, limits the number of entries in the histogram to the value
+of the parameter. Defaults to 100 if not provided. Set the parameter to 0 to print the entire histogram.
 
 ## time
 Configures the time limit (in seconds) in which resourceExhausted events are kept in 

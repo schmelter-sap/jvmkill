@@ -30,7 +30,8 @@ struct ObjectCount {
 
 class HeapStatsHashtable: public HeapStats {
 public:
-    HeapStatsHashtable();
+    HeapStatsHashtable(int maxEntries);
+    
     virtual ~HeapStatsHashtable();
 
     void recordObject(const char *className, size_t objectSize);
@@ -38,19 +39,25 @@ public:
     void print(std::ostream& os) const;
 
 private:
+    int heapHistogramMaxEntries;
     std::unordered_map<std::string, ObjectCount> javaObjects;
     unsigned int longestClassName = 10;
 };
 
 class HeapStatsHashtableFactory: public HeapStatsFactory {
 public:
-    HeapStatsHashtableFactory() {}
+    HeapStatsHashtableFactory(int maxEntries) {
+        heapHistogramMaxEntries = maxEntries;
+    }
 
     virtual ~HeapStatsHashtableFactory() {}
 
     HeapStats* create() {
-        return new HeapStatsHashtable();
+        return new HeapStatsHashtable(heapHistogramMaxEntries);
     }
+
+private:
+    int heapHistogramMaxEntries;
 };
 
 #endif // heapstatshashtable_h

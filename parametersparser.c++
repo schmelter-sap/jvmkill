@@ -26,11 +26,13 @@
 const int DEFAULT_COUNT_THRESHOLD = 0;
 const int DEFAULT_TIME_THRESHOLD = 1;
 const int DEFAULT_PRINT_HEAP_HISTOGRAM = 0;
+const int DEFAULT_HEAP_HISTOGRAM_MAX_ENTRIES = 100;
 
 enum {
     TIME_OPT = 0,
     COUNT_OPT,
     PRINT_HEAP_HISTOGRAM_OPT,
+    HEAP_HISTOGRAM_MAX_ENTRIES_OPT,
     THE_END
 };
 
@@ -38,6 +40,7 @@ char *tokens[] = {
     [TIME_OPT] = strdup("time"),
     [COUNT_OPT] = strdup("count"),
     [PRINT_HEAP_HISTOGRAM_OPT] = strdup("printHeapHistogram"),
+    [HEAP_HISTOGRAM_MAX_ENTRIES_OPT] = strdup("heapHistogramMaxEntries"),
     [THE_END] = NULL
 };
 
@@ -57,6 +60,7 @@ AgentParameters ParametersParser::parse(char *options) {
   result.count_threshold = DEFAULT_COUNT_THRESHOLD;
   result.time_threshold = DEFAULT_TIME_THRESHOLD;
   result.print_heap_histogram = DEFAULT_PRINT_HEAP_HISTOGRAM;
+  result.heap_histogram_max_entries = DEFAULT_HEAP_HISTOGRAM_MAX_ENTRIES;
 
   if (options != NULL) {
      // Copy input options since getsubopt modifies its input
@@ -80,6 +84,11 @@ AgentParameters ParametersParser::parse(char *options) {
           case PRINT_HEAP_HISTOGRAM_OPT:
               checkValueProvided(value, PRINT_HEAP_HISTOGRAM_OPT);
               result.print_heap_histogram = (strlen(value) == 0) ? DEFAULT_PRINT_HEAP_HISTOGRAM : atoi(value);
+              break;
+
+          case HEAP_HISTOGRAM_MAX_ENTRIES_OPT:
+              checkValueProvided(value, HEAP_HISTOGRAM_MAX_ENTRIES_OPT);
+              result.heap_histogram_max_entries = (strlen(value) == 0) ? DEFAULT_HEAP_HISTOGRAM_MAX_ENTRIES : atoi(value);
               break;
 
           default:

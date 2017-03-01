@@ -27,8 +27,8 @@ HeapStatsHashtable *heapStats;
 const char* test_class_name_1 = "java.lang.Object";
 const char* test_class_name_2 = "java.lang.long.longer.String";
 
-void setup() {
-    heapStats = new HeapStatsHashtable();
+void setup(int heapHistogramMaxEntries) {
+    heapStats = new HeapStatsHashtable(heapHistogramMaxEntries);
 }
 
 void teardown() {
@@ -51,7 +51,7 @@ bool verify(std::string test, std::string expected, std::string actual) {
 }
 
 bool testSingleRecordAndPrint() {
-    setup();
+    setup(0);
     HeapStatsHashtable tHeapStats = *heapStats;
     std::stringstream ss;
     
@@ -67,7 +67,7 @@ bool testSingleRecordAndPrint() {
 }
 
 bool testMultiRecordAndPrint() {
-    setup();
+    setup(0);
     HeapStatsHashtable tHeapStats = *heapStats;
     std::stringstream ss;
     
@@ -85,7 +85,7 @@ bool testMultiRecordAndPrint() {
 }
 
 bool testDuplicateRecordAndPrint() {
-    setup();
+    setup(0);
     HeapStatsHashtable tHeapStats = *heapStats;
     std::stringstream ss;
     
@@ -104,7 +104,7 @@ bool testDuplicateRecordAndPrint() {
 }
 
 bool testSortAndPrint() {
-    setup();
+    setup(0);
     HeapStatsHashtable tHeapStats = *heapStats;
     std::stringstream ss;
 
@@ -121,8 +121,25 @@ bool testSortAndPrint() {
     return result;
 }
 
+bool testTruncation() {
+    setup(1);
+    HeapStatsHashtable tHeapStats = *heapStats;
+    std::stringstream ss;
+
+    tHeapStats.recordObject(test_class_name_2, 937072);
+    tHeapStats.recordObject(test_class_name_1, 96);
+    tHeapStats.print(ss);
+
+    const std::string expected ("| Instance Count | Total Bytes | Class Name                   |\n"
+                                "| 1              | 937072      | java.lang.long.longer.String |\n");
+
+    bool result = verify ("testSortAndPrint", expected.c_str(), ss.str().c_str());
+    teardown();
+    return result;
+}
+
 bool testLargeSortAndPrint() {
-    setup();
+    setup(0);
     HeapStatsHashtable tHeapStats = *heapStats;
     std::stringstream ss;
 
@@ -130,7 +147,9 @@ bool testLargeSortAndPrint() {
     std::ifstream infile("fixtures/large.txt");
     size_t instanceCount, totalSize;
     std::string className;
+    int expectedEntries = 0;
     while (infile >> instanceCount >> totalSize >> className) {
+      expectedEntries++;
       size_t instanceSize = totalSize / instanceCount;
 
       for (size_t i = 0; i < instanceCount; i++) {
@@ -146,6 +165,7 @@ bool testLargeSortAndPrint() {
     std::string line;
     bool first = true;
     size_t prevTotal = (size_t)-1;
+    int actualEntries = 0;
     while (std::getline(ss, line)) {
         size_t start_pos = 0;
         while((start_pos = line.find("|", start_pos)) != std::string::npos) {
@@ -156,6 +176,7 @@ bool testLargeSortAndPrint() {
         if (!first) {
             std::istringstream iss(line);
             if (!(iss >> instanceCount >> totalSize >> className)) { break; }
+            actualEntries++;
             if (totalSize > prevTotal) {
                 std::cout << "Failed. Histogram is not sorted. " << prevTotal << " should be greater than or equal to " << totalSize << "\n";
                 result = false;
@@ -165,12 +186,18 @@ bool testLargeSortAndPrint() {
         first = false;
     }
 
+    if (actualEntries != expectedEntries) {
+        std::cout << "Failed. Histogram has " << actualEntries << " entries but " << expectedEntries << " were expected\n";
+        result = false;
+    }
+
     teardown();
     return result;
 }
 
 int main() {
-    bool result = testSingleRecordAndPrint() && testMultiRecordAndPrint() && testDuplicateRecordAndPrint() && testSortAndPrint() && testLargeSortAndPrint();
+    bool result = testSingleRecordAndPrint() && testMultiRecordAndPrint() && testDuplicateRecordAndPrint() && testSortAndPrint()
+        && testTruncation() && testLargeSortAndPrint();
     if (result) {    	
         fprintf(stdout, "SUCCESS\n");
         exit(EXIT_SUCCESS);

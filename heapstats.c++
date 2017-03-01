@@ -23,7 +23,8 @@
 
 #include "heapstatshashtable.h"
 
-HeapStatsHashtable::HeapStatsHashtable() {
+HeapStatsHashtable::HeapStatsHashtable(int maxEntries) {
+    heapHistogramMaxEntries = maxEntries;
 }
 
 HeapStatsHashtable::~HeapStatsHashtable() {
@@ -55,8 +56,14 @@ void HeapStatsHashtable::print(std::ostream& os) const {
     std::string heading = "Class Name";
     heading.resize(longestClassName, ' ');
     os << "| Instance Count | Total Bytes | " << heading << " |\n";
-    
-    for (std::vector<std::pair<std::string, ObjectCount> >::iterator it=tmpObjects.begin(); it!=tmpObjects.end(); it++) {        
+
+    int entries = 0;
+    for (std::vector<std::pair<std::string, ObjectCount> >::iterator it=tmpObjects.begin(); it!=tmpObjects.end(); it++) {
+        entries++;
+        if (heapHistogramMaxEntries > 0 && entries > heapHistogramMaxEntries) {
+            break;
+        }
+
         (*it).first.resize(longestClassName, ' ');
         std::string totalSize = std::to_string((*it).second.objectSize);
         totalSize.resize(11, ' ');    

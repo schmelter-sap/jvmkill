@@ -34,7 +34,8 @@ void teardown() {
 
 bool testsDefaults() {
    AgentParameters params = parser->parse(strdup(""));
-   bool passed = ((params.time_threshold == 1) && (params.count_threshold == 0) && (params.print_heap_histogram == false));
+   bool passed = ((params.time_threshold == 1) && (params.count_threshold == 0) && (params.print_heap_histogram == false)
+       && params.heap_histogram_max_entries == 100);
    if (!passed) {
       fprintf(stdout, "testsDefaults FAILED\n");
    }
@@ -104,12 +105,40 @@ bool testsParsesDefaultPrintHeapHistogram() {
    return passed;
 }
 
+bool testsParsesHeapHistogramMaxEntries() {
+   AgentParameters params = parser->parse(strdup("heapHistogramMaxEntries=200"));
+   bool passed = (params.heap_histogram_max_entries == 200);
+   if (!passed) {
+      fprintf(stdout, "testsParsesHeapHistogramMaxEntries FAILED\n");
+   }
+   return passed;
+}
+
+bool testsParsesHeapHistogramMaxEntriesUnlimited() {
+   AgentParameters params = parser->parse(strdup("heapHistogramMaxEntries=0"));
+   bool passed = (params.heap_histogram_max_entries == 0);
+   if (!passed) {
+      fprintf(stdout, "testsParsesHeapHistogramMaxEntriesUnlimited FAILED\n");
+   }
+   return passed;
+}
+
+bool testsParsesDefaultHeapHistogramMaxEntries() {
+   AgentParameters params = parser->parse(strdup("heapHistogramMaxEntries="));
+   bool passed = (params.heap_histogram_max_entries == 100);
+   if (!passed) {
+      fprintf(stdout, "testsParsesDefaultHeapHistogramMaxEntries FAILED\n");
+   }
+   return passed;
+}
+
 int main() {
 	setup();
 	bool result = testsDefaults() &&
 	   testsParsesTimeThreshold() && testsParsesDefaultTimeThreshold() &&
 	   testsParsesCountThreshold() && testsParsesDefaultCountThreshold() &&
-	   testsParsesPrintHeapHistogramOn() && testsParsesPrintHeapHistogramOff() && testsParsesDefaultPrintHeapHistogram();
+	   testsParsesPrintHeapHistogramOn() && testsParsesPrintHeapHistogramOff() && testsParsesDefaultPrintHeapHistogram() &&
+	   testsParsesHeapHistogramMaxEntries() && testsParsesHeapHistogramMaxEntriesUnlimited() && testsParsesDefaultHeapHistogramMaxEntries();
 	teardown();
 	if (result) {
        fprintf(stdout, "SUCCESS\n");

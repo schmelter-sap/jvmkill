@@ -89,7 +89,7 @@ bool Threshold::onOOM() {
 }
 
 //HeapStatsHashtable
-HeapStatsHashtable::HeapStatsHashtable() {}
+HeapStatsHashtable::HeapStatsHashtable(int maxEntries) {}
 
 HeapStatsHashtable::~HeapStatsHashtable() {}
 

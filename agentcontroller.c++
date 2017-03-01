@@ -52,7 +52,7 @@ void AgentController::setup(char *options) {
 void AgentController::setParameters(AgentParameters parameters) {
   heuristic = new Threshold(parameters);
   if (parameters.print_heap_histogram) {
-      actions[actionCount++] = new HeapHistogramAction(jvmti, new HeapStatsHashtableFactory());
+      actions[actionCount++] = new HeapHistogramAction(jvmti, new HeapStatsHashtableFactory(parameters.heap_histogram_max_entries));
   }
   actions[actionCount++] = new KillAction();
 
