@@ -207,7 +207,7 @@ std::string PoolStatsAction::usageStats(JNIEnv* jniEnv, jobject usage) {
         return "FAILED";
     }
 
-    std::ostringstream out = std::ostringstream();
+    std::ostringstream out;
 
     out << "init " << jniEnv->CallLongMethod(usage, initMeth) <<
         ", used " << jniEnv->CallLongMethod(usage, usedMeth) <<
