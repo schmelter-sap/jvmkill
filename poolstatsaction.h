@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 the original author or authors.
+ * Copyright (c) 2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,24 @@
  * limitations under the License.
  */
 
-#ifndef killaction_h
-#define killaction_h
+#ifndef poolstatsaction_h
+#define poolstatsaction_h
 
 #include "action.h"
 
-class KillAction: public Action
+#include <string>
+
+class PoolStatsAction: public Action
 {
 public:
-   KillAction();
+   PoolStatsAction();
+
+   virtual ~PoolStatsAction();
 
    void act(JNIEnv* jniEnv);
 
-   void setSignal(int signal);
-
 private:
-   int signal;
+   std::string usageStats(JNIEnv* jniEnv, jobject usage);
 };
 
-#endif // killaction_h
+#endif // poolstatsaction_h

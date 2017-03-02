@@ -24,6 +24,7 @@
 #include "heuristic.h"
 #include "threshold.h"
 #include "killaction.h"
+#include "poolstatsaction.h"
 #include "heaphistogramaction.h"
 #include "heapstatshashtable.h"
 #include "action.h"
@@ -32,7 +33,9 @@ static int ActionRunCounter = 0;
 
 static int MockPrintHeapActionCount = 0;
 static int MockKillActionRunOrder = -1;
+static int MockPoolStatsActionRunOrder = -1;
 static int MockPrintHeapActionRunOrder = -1;
+static int MockPoolStatsActionCount = 0;
 static int MockKillActionCount = 0;
 static int MockThresholdEventCount = 0;
 AgentController* agentController;
@@ -48,6 +51,17 @@ HeapHistogramAction::~HeapHistogramAction() {
 }
 void HeapHistogramAction::act(JNIEnv* jniEnv) {
 	MockPrintHeapActionRunOrder = ActionRunCounter++;
+}
+
+//PoolStatsAction
+
+PoolStatsAction::PoolStatsAction() {
+	MockPoolStatsActionCount++;
+}
+PoolStatsAction::~PoolStatsAction() {
+}
+void PoolStatsAction::act(JNIEnv* jniEnv) {
+	MockPoolStatsActionRunOrder = ActionRunCounter++;
 }
 
 //KillAction
@@ -113,9 +127,9 @@ bool testAlwaysAddsKillAction() {
 	params.print_heap_histogram = true;
 	agentController->setParameters(params);
 	bool passed = (MockKillActionCount == 1);
-  if (!passed) {
-     fprintf(stdout, "testAlwaysAddsKillAction FAILED\n");
-  }
+    if (!passed) {
+        fprintf(stdout, "testAlwaysAddsKillAction FAILED\n");
+    }
 	teardown();
 	return passed;
 }
@@ -126,10 +140,10 @@ bool testDoesNotAddHeapActionWhenOff() {
 	AgentParameters params;
 	params.print_heap_histogram = false;
 	agentController->setParameters(params);
-  bool passed = (MockPrintHeapActionCount == 0);
-  if (!passed) {
-     fprintf(stdout, "testDoesNotAddHeapActionWhenOff FAILED\n");
-  }
+    bool passed = (MockPrintHeapActionCount == 0);
+    if (!passed) {
+        fprintf(stdout, "testDoesNotAddHeapActionWhenOff FAILED\n");
+    }
 	teardown();
 	return passed;
 }
@@ -140,9 +154,9 @@ bool testAddsHeapActionWhenOn() {
 	params.print_heap_histogram = true;
 	agentController->setParameters(params);
 	bool passed = (MockPrintHeapActionCount == 1);
-  if (!passed) {
-     fprintf(stdout, "testAddsHeapActionWhenOn FAILED\n");
-  }
+    if (!passed) {
+        fprintf(stdout, "testAddsHeapActionWhenOn FAILED\n");
+    }
 	teardown();
 	return passed;
 }
@@ -157,20 +171,21 @@ bool testRunsAllActionsInCorrectOrderOnOOM() {
 	//run actions on first call
 	agentController->onOOM(mockJNIEnv);
 	bool firstAssertions = ((MockPrintHeapActionRunOrder == -1) &&
-	               (MockKillActionRunOrder == -1) &&
-								 (MockThresholdEventCount == 1));
+	    (MockKillActionRunOrder == -1) &&
+		(MockThresholdEventCount == 1));
 
 	agentController->onOOM(mockJNIEnv);
-  bool passed = ((MockPrintHeapActionRunOrder == 0) &&
-	               (MockKillActionRunOrder == 1) &&
-								 (MockThresholdEventCount > 1) &&
-							   (firstAssertions));
-  fprintf(stdout, "%d\n", MockPrintHeapActionRunOrder);
-  if (!passed) {
-    fprintf(stdout, "testRunsAllActionsInCorrectOrderOnOOM FAILED\n");
-  }
+    bool passed = ((MockPrintHeapActionRunOrder == 0) &&
+        (MockPoolStatsActionRunOrder == 1) &&
+	    (MockKillActionRunOrder == 2) &&
+		(MockThresholdEventCount > 1) &&
+		(firstAssertions));
+    fprintf(stdout, "%d\n", MockPrintHeapActionRunOrder);
+    if (!passed) {
+        fprintf(stdout, "testRunsAllActionsInCorrectOrderOnOOM FAILED\n");
+    }
 	teardown();
-  return passed;
+    return passed;
 }
 
 
