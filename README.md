@@ -44,6 +44,10 @@ The agent accepts the following parameters:
 Configures the limit of resourceExhausted events that can be fired in the configured
 time interval. Defaults to 0 if not provided (JVM is killed with a single fired event).
 
+## time
+Configures the time limit (in seconds) in which resourceExhausted events are kept in 
+the counter. Defaults to 1 if not provided.
+
 ## printHeapHistogram
 
 Determines whether or not a histogram of heap usage is printed before the agent kills the JVM.
@@ -61,9 +65,19 @@ The histogram may be truncated. To set the number of entries that appear, use th
 When histogram printing is enabled, limits the number of entries in the histogram to the value
 of the parameter. Defaults to 100 if not provided. Set the parameter to 0 to print the entire histogram.
 
-## time
-Configures the time limit (in seconds) in which resourceExhausted events are kept in 
-the counter. Defaults to 1 if not provided.
+## printMemoryUsage
+
+Determines whether or not memory usage is printed before the agent kills the JVM.
+To disable memory usage printing, set the parameter to 0. Defaults to 1 (enabled) if not provided.
+
+If the agent has been driven because the JVM is unable to create a thread, memory usage is not printed
+as attempting to obtain memory usage statistics can cause the agent to fail in which case the JVM is not killed.
+
+When testing thread exhaustion with a small heap on Linux, it was found that
+the agent can be driven for heap exhaustion and yet
+obtaining memory usage stats can still cause the agent to fail in which case
+the JVM is not killed. If this is encountered with a real application, printing memory
+usage can be disabled.
 
 ## License
 

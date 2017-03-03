@@ -31,7 +31,7 @@ public:
 
    virtual ~HeapHistogramAction();
 
-   void act(JNIEnv* jniEnv);
+   void act(JNIEnv* jniEnv, jint resourceExhaustionFlags);
 
    jint heapReferenceCallback(jvmtiHeapReferenceKind reference_kind, 
      const jvmtiHeapReferenceInfo* reference_info, 

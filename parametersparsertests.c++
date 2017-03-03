@@ -35,7 +35,7 @@ void teardown() {
 bool testsDefaults() {
    AgentParameters params = parser->parse(strdup(""));
    bool passed = ((params.time_threshold == 1) && (params.count_threshold == 0) && (params.print_heap_histogram == false)
-       && params.heap_histogram_max_entries == 100);
+       && params.heap_histogram_max_entries == 100) && (params.print_memory_usage == true);
    if (!passed) {
       fprintf(stdout, "testsDefaults FAILED\n");
    }
@@ -128,6 +128,33 @@ bool testsParsesDefaultHeapHistogramMaxEntries() {
    bool passed = (params.heap_histogram_max_entries == 100);
    if (!passed) {
       fprintf(stdout, "testsParsesDefaultHeapHistogramMaxEntries FAILED\n");
+   }
+   return passed;
+}
+
+bool testsParsesPrintMemoryUsageOn() {
+   AgentParameters params = parser->parse(strdup("printMemoryUsage=1"));
+   bool passed = (params.print_memory_usage == true);
+   if (!passed) {
+      fprintf(stdout, "testsParsesPrintMemoryUsageOn FAILED\n");
+   }
+   return passed;
+}
+
+bool testsParsesPrintMemoryUsageOff() {
+   AgentParameters params = parser->parse(strdup("printMemoryUsage=0"));
+   bool passed = (params.print_memory_usage == false);
+   if (!passed) {
+      fprintf(stdout, "testsParsesPrintMemoryUsageOff FAILED\n");
+   }
+   return passed;
+}
+
+bool testsParsesDefaultPrintMemoryUsage() {
+   AgentParameters params = parser->parse(strdup("printMemoryUsage="));
+   bool passed = (params.print_memory_usage == true);
+   if (!passed) {
+      fprintf(stdout, "testsParsesDefaultPrintMemoryUsage FAILED\n");
    }
    return passed;
 }

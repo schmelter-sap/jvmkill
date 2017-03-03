@@ -162,6 +162,6 @@ HeapHistogramAction::~HeapHistogramAction() {
 	}
 }
 
-void HeapHistogramAction::act(JNIEnv* jniEnv) {
+void HeapHistogramAction::act(JNIEnv* jniEnv, jint resourceExhaustionFlags) {
 	printHistogram(jniEnv, &(std::cout));
 }

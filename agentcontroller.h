@@ -28,7 +28,8 @@ public:
    AgentController(jvmtiEnv* jvm);
    void setup(char *options);
    void setParameters(AgentParameters parameters);
-   void onOOM(JNIEnv *);
+   // See https://docs.oracle.com/javase/8/docs/platform/jvmti/jvmti.html#jvmtiResourceExhaustionFlags
+   void onOOM(JNIEnv *, jint resourceExhaustionFlags);
 private:
   jvmtiEnv* jvmti;
   Heuristic* heuristic;

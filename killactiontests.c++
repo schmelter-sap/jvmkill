@@ -51,7 +51,7 @@ void teardown() {
 bool testSendsSignal() {
 	sigQuit_sent = false;
 
-	action->act(mockJNIEnv);
+	action->act(mockJNIEnv, 0);
 
 	if (!sigQuit_sent) {
        fprintf(stdout, "testSendsSignal FAILED\n");

@@ -24,7 +24,7 @@ class KillAction: public Action
 public:
    KillAction();
 
-   void act(JNIEnv* jniEnv);
+   void act(JNIEnv* jniEnv, jint resourceExhaustionFlags);
 
    void setSignal(int signal);
 

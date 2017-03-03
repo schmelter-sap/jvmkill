@@ -22,7 +22,7 @@
 class Action
 {
 public:
-   virtual void act(JNIEnv* jniEnv) = 0;
+   virtual void act(JNIEnv* jniEnv, jint resourceExhaustionFlags) = 0;
 };
 
 #endif // action_h

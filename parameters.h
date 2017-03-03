@@ -25,6 +25,7 @@ struct AgentParameters {
    int count_threshold;
    bool print_heap_histogram;
    int heap_histogram_max_entries;
+   bool print_memory_usage;
 };
 
 #endif // parameters_h

@@ -27,12 +27,14 @@ const int DEFAULT_COUNT_THRESHOLD = 0;
 const int DEFAULT_TIME_THRESHOLD = 1;
 const int DEFAULT_PRINT_HEAP_HISTOGRAM = 0;
 const int DEFAULT_HEAP_HISTOGRAM_MAX_ENTRIES = 100;
+const int DEFAULT_PRINT_MEMORY_USAGE = 1;
 
 enum {
     TIME_OPT = 0,
     COUNT_OPT,
     PRINT_HEAP_HISTOGRAM_OPT,
     HEAP_HISTOGRAM_MAX_ENTRIES_OPT,
+    PRINT_MEMORY_USAGE_OPT,
     THE_END
 };
 
@@ -41,6 +43,7 @@ char *tokens[] = {
     [COUNT_OPT] = strdup("count"),
     [PRINT_HEAP_HISTOGRAM_OPT] = strdup("printHeapHistogram"),
     [HEAP_HISTOGRAM_MAX_ENTRIES_OPT] = strdup("heapHistogramMaxEntries"),
+    [PRINT_MEMORY_USAGE_OPT] = strdup("printMemoryUsage"),
     [THE_END] = NULL
 };
 
@@ -61,6 +64,7 @@ AgentParameters ParametersParser::parse(char *options) {
   result.time_threshold = DEFAULT_TIME_THRESHOLD;
   result.print_heap_histogram = DEFAULT_PRINT_HEAP_HISTOGRAM;
   result.heap_histogram_max_entries = DEFAULT_HEAP_HISTOGRAM_MAX_ENTRIES;
+  result.print_memory_usage = DEFAULT_PRINT_MEMORY_USAGE;
 
   if (options != NULL) {
      // Copy input options since getsubopt modifies its input
@@ -89,6 +93,11 @@ AgentParameters ParametersParser::parse(char *options) {
           case HEAP_HISTOGRAM_MAX_ENTRIES_OPT:
               checkValueProvided(value, HEAP_HISTOGRAM_MAX_ENTRIES_OPT);
               result.heap_histogram_max_entries = (strlen(value) == 0) ? DEFAULT_HEAP_HISTOGRAM_MAX_ENTRIES : atoi(value);
+              break;
+
+          case PRINT_MEMORY_USAGE_OPT:
+              checkValueProvided(value, PRINT_MEMORY_USAGE_OPT);
+              result.print_memory_usage = (strlen(value) == 0) ? DEFAULT_PRINT_MEMORY_USAGE : atoi(value);
               break;
 
           default:

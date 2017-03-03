@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <sstream>
+#include <jvmti.h>
 
 #include "poolstatsaction.h"
 
@@ -33,7 +34,13 @@ PoolStatsAction::~PoolStatsAction() {
 }
 
 
-void PoolStatsAction::act(JNIEnv* jniEnv) {
+void PoolStatsAction::act(JNIEnv* jniEnv, jint resourceExhaustionFlags) {
+    // Do not attempt to obtain pool stats on thread exhaustion as this fails abruptly.
+    if ((resourceExhaustionFlags & JVMTI_RESOURCE_EXHAUSTED_THREADS) == JVMTI_RESOURCE_EXHAUSTED_THREADS) {
+        std::cout << "\nThe VM was unable to create a thread. In these circumstances, memory usage statistics cannot be determined.\n";
+        return;
+    }
+
     jclass mfCls = jniEnv->FindClass("java/lang/management/ManagementFactory");
     if (mfCls == NULL) {
         std::cerr << "ERROR: java.lang.management.ManagementFactory class not found\n";

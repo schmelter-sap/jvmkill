@@ -37,10 +37,10 @@ AgentController::AgentController(jvmtiEnv* jvm) {
   actions = new Action*[MAX_ACTIONS];
 }
 
-void AgentController::onOOM(JNIEnv* jniEnv) {
+void AgentController::onOOM(JNIEnv* jniEnv, jint resourceExhaustionFlags) {
   if (heuristic->onOOM()) {
     for (int i=0;i<actionCount;i++) {
-      actions[i]->act(jniEnv);
+      actions[i]->act(jniEnv, resourceExhaustionFlags);
     }
   }
 }
@@ -52,10 +52,15 @@ void AgentController::setup(char *options) {
 
 void AgentController::setParameters(AgentParameters parameters) {
   heuristic = new Threshold(parameters);
+  actionCount = 0;
+  for (int i=0;i<actionCount;i++) {
+      actions[i] = NULL;
+  }
   if (parameters.print_heap_histogram) {
       actions[actionCount++] = new HeapHistogramAction(jvmti, new HeapStatsHashtableFactory(parameters.heap_histogram_max_entries));
   }
-  actions[actionCount++] = new PoolStatsAction();
+  if (parameters.print_memory_usage) {
+      actions[actionCount++] = new PoolStatsAction();
+  }
   actions[actionCount++] = new KillAction();
-
 }

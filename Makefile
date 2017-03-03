@@ -66,14 +66,14 @@ threadtest0: build
 	@echo "=============================================="
 	$(JAVA_HOME)/bin/javac JvmKillTestThreads.java
 	!($(JAVA_HOME)/bin/java -Xmx1m \
-	    -agentpath:$(PWD)/$(TARGET) \
+	    -agentpath:$(PWD)/$(TARGET)=printMemoryUsage=0 \
 	    -cp $(PWD) JvmKillTestThreads)
 
 threadtest-10-2: build
 	@echo "=============================================="
 	$(JAVA_HOME)/bin/javac JvmKillTestThreads.java
 	!($(JAVA_HOME)/bin/java -Xmx1m \
-	    -agentpath:$(PWD)/$(TARGET)=time=10,count=2,printHeapHistogram=1,heapHistogramMaxEntries=10 \
+	    -agentpath:$(PWD)/$(TARGET)=time=10,count=2,printHeapHistogram=1,heapHistogramMaxEntries=10,printMemoryUsage=0 \
 	    -cp $(PWD) JvmKillTestThreads)
 
 memtests: memtest0 memtest-10-2

@@ -28,7 +28,7 @@ public:
 
    virtual ~PoolStatsAction();
 
-   void act(JNIEnv* jniEnv);
+   void act(JNIEnv* jniEnv, jint resourceExhaustionFlags);
 
 private:
    std::string usageStats(JNIEnv* jniEnv, jobject usage);
