@@ -12,7 +12,7 @@ params:
 
   ARTIFACTORY_REPOSITORY: libs-snapshot-local
   PLATFORM:               darwin
-  VERSION:                1.3.0.BUILD-SNAPSHOT
+  VERSION:                1.4.0.BUILD-SNAPSHOT
 
   ARTIFACTORY_USERNAME:
   ARTIFACTORY_PASSWORD:
