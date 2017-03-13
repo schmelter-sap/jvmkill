@@ -28,7 +28,7 @@ KillAction::KillAction() {
 }
 
 void KillAction::act(JNIEnv* jniEnv, jint resourceExhaustionFlags) {
-	fprintf(stderr, "killing current process\n");
+	fprintf(stderr, "\nKilling current process\n");
     kill(getpid(), signal);
 }
 
