@@ -20,6 +20,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <iostream>
+#include <chrono>
+#include <thread>
 
 #include "heapstatshashtable.h"
 
@@ -67,6 +69,8 @@ void HeapStatsHashtable::print(std::ostream& os) const {
     heading.resize(longestClassName, ' ');
     os << "| Instance Count | Total Bytes | " << heading << " |\n";
 
+    std::chrono::milliseconds timespan(1);
+
     int entries = 0;
     for (std::vector<std::pair<std::string, ObjectCount> >::iterator it=tmpObjects.begin(); it!=tmpObjects.end(); it++) {
         entries++;
@@ -76,10 +80,13 @@ void HeapStatsHashtable::print(std::ostream& os) const {
 
         (*it).first.resize(longestClassName, ' ');
         std::string totalSize = std::to_string((*it).second.objectSize);
-        totalSize.resize(11, ' ');    
+        totalSize.resize(11, ' ');
         std::string totalCount = std::to_string((*it).second.objectCount);
         totalCount.resize(14, ' ');
-        
+
+        // Reduce the risk of loggregator missing some entries.
+        std::this_thread::sleep_for(timespan);
+
         os << "| " << totalCount << " | " << totalSize << " | " << (*it).first << " |\n";
     }
 }
