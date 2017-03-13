@@ -41,7 +41,6 @@ public:
 private:
     int heapHistogramMaxEntries;
     std::unordered_map<std::string, ObjectCount> javaObjects;
-    unsigned int longestClassName = 10;
 };
 
 class HeapStatsHashtableFactory: public HeapStatsFactory {

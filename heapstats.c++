@@ -29,7 +29,6 @@ HeapStatsHashtable::HeapStatsHashtable(int maxEntries) {
 
 HeapStatsHashtable::~HeapStatsHashtable() {
     javaObjects.clear();
-    longestClassName = 10;
 }
 
 void HeapStatsHashtable::recordObject(const char *className, size_t objectSize) {
@@ -39,8 +38,6 @@ void HeapStatsHashtable::recordObject(const char *className, size_t objectSize) 
         objectSize = javaObjects.at(classNameString).objectSize + objectSize;
         objectCount = javaObjects.at(classNameString).objectCount + objectCount;
         javaObjects.erase(classNameString);
-    } else if(classNameString.length() > longestClassName) {
-        longestClassName = classNameString.length();
     }
     javaObjects.insert (std::pair<std::string, ObjectCount>(classNameString, {objectSize, objectCount}) );
 }
@@ -52,6 +49,19 @@ bool sorter (std::pair<std::string, ObjectCount> i, std::pair<std::string, Objec
 void HeapStatsHashtable::print(std::ostream& os) const {
     std::vector<std::pair<std::string, ObjectCount> > tmpObjects(javaObjects.begin(), javaObjects.end());    
     std::sort(tmpObjects.begin(), tmpObjects.end(), sorter);
+
+    std::vector<std::pair<std::string, ObjectCount>>::size_type maxEntries =
+        (std::vector<std::pair<std::string, ObjectCount>>::size_type)heapHistogramMaxEntries;
+    if (maxEntries > 0 && tmpObjects.size() > maxEntries) {
+        tmpObjects.resize(maxEntries);
+    }
+
+    size_t longestClassName = 10;
+    for (std::vector<std::pair<std::string, ObjectCount> >::iterator it=tmpObjects.begin(); it!=tmpObjects.end(); it++) {
+        if ((*it).first.size() > longestClassName) {
+            longestClassName = (*it).first.size();
+        }
+    }
 
     std::string heading = "Class Name";
     heading.resize(longestClassName, ' ');
