@@ -1,6 +1,6 @@
 FROM cloudfoundry/cflinuxfs2
 
-RUN apt-get install -y \
+RUN apt-get update && apt-get install -y \
     jq \
     python-dev \
     python-pip \
