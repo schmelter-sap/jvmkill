@@ -24,6 +24,8 @@
 #include <iostream>
 #include <sstream>
 #include <jvmti.h>
+#include <chrono>
+#include <thread>
 
 #include "poolstatsaction.h"
 
@@ -37,7 +39,7 @@ PoolStatsAction::~PoolStatsAction() {
 void PoolStatsAction::act(JNIEnv* jniEnv, jint resourceExhaustionFlags) {
     // Do not attempt to obtain pool stats on thread exhaustion as this fails abruptly.
     if ((resourceExhaustionFlags & JVMTI_RESOURCE_EXHAUSTED_THREADS) == JVMTI_RESOURCE_EXHAUSTED_THREADS) {
-        std::cout << "\nThe VM was unable to create a thread. In these circumstances, memory usage statistics cannot be determined.\n";
+        std::cout << "\nThe VM was unable to create a thread. In these circumstances, memory usage statistics cannot be determined." << std::endl;
         return;
     }
 
@@ -99,11 +101,16 @@ void PoolStatsAction::act(JNIEnv* jniEnv, jint resourceExhaustionFlags) {
       return;
     }
 
-    std::cout << "\nMemory usage:\n" <<
-        "   Heap memory: " << heapUsageStats << "\n" <<
-        "   Non-heap memory: " << nonHeapUsageStats << "\n";
+    std::chrono::milliseconds timespan(1);
 
-    std::cout << "\nMemory pool usage:\n";
+    std::cout << "\nMemory usage:" << std::endl <<
+        "   Heap memory: " << heapUsageStats << std::endl <<
+        "   Non-heap memory: " << nonHeapUsageStats << std::endl;
+
+    std::cout << "\nMemory pool usage:" << std::endl;
+
+    // Reduce the risk of loggregator missing some entries.
+    std::this_thread::sleep_for(timespan);
 
     jmethodID getMemPoolMXBeansMeth = jniEnv->GetStaticMethodID(mfCls, "getMemoryPoolMXBeans", "()Ljava/util/List;");
     if (getMemPoolMXBeansMeth == NULL) {
@@ -177,7 +184,10 @@ void PoolStatsAction::act(JNIEnv* jniEnv, jint resourceExhaustionFlags) {
 
         const char* name = jniEnv->GetStringUTFChars(nameObj, NULL);
 
-        std::cout << "   " << name << ": " << usageStats(jniEnv, usage) << "\n";
+        std::cout << "   " << name << ": " << usageStats(jniEnv, usage) << std::endl;
+
+        // Reduce the risk of loggregator missing some entries.
+        std::this_thread::sleep_for(timespan);
 
         jniEnv->ReleaseStringUTFChars(nameObj, name);
     }

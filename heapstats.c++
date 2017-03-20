@@ -67,7 +67,7 @@ void HeapStatsHashtable::print(std::ostream& os) const {
 
     std::string heading = "Class Name";
     heading.resize(longestClassName, ' ');
-    os << "| Instance Count | Total Bytes | " << heading << " |\n";
+    os << "| Instance Count | Total Bytes | " << heading << " |" << std::endl;
 
     std::chrono::milliseconds timespan(1);
 
@@ -87,6 +87,9 @@ void HeapStatsHashtable::print(std::ostream& os) const {
         // Reduce the risk of loggregator missing some entries.
         std::this_thread::sleep_for(timespan);
 
-        os << "| " << totalCount << " | " << totalSize << " | " << (*it).first << " |\n";
+        os << "| " << totalCount << " | " << totalSize << " | " << (*it).first << " |" << std::endl;
     }
+
+    // Reduce the risk of loggregator missing some entries.
+    std::this_thread::sleep_for(timespan);
 }
