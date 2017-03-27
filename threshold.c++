@@ -40,6 +40,7 @@ int clock_gettime(int clk_id, struct timespec *t){
 #else
 #include <time.h>
 #endif
+#include <iostream>
 
 Threshold::Threshold(AgentParameters param) {
    parameters = param;
@@ -83,6 +84,6 @@ int Threshold::countEvents() {
 bool Threshold::onOOM() {
    addEvent();
    int eventCount = countEvents();
-   fprintf(stderr, "ResourceExhausted! (%d/%d)\n", eventCount, parameters.count_threshold);
+   std::cerr << "ResourceExhausted! (" << eventCount << "/" << parameters.count_threshold << ")" << std::endl;
    return eventCount > parameters.count_threshold;
 }

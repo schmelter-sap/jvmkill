@@ -15,6 +15,7 @@
  */
 
 #include <sys/types.h>
+#include <iostream>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,7 +29,7 @@ KillAction::KillAction() {
 }
 
 void KillAction::act(JNIEnv* jniEnv, jint resourceExhaustionFlags) {
-	fprintf(stderr, "\njvmkill killing current process\n");
+	std::cerr << std::endl << "jvmkill killing current process" << std::endl;
     kill(getpid(), signal);
 }
 

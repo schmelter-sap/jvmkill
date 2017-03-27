@@ -15,6 +15,7 @@
  */
 
 #include <sys/types.h>
+#include <iostream>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,7 +50,7 @@ char *tokens[] = {
 
 void checkValueProvided(char *value, int option) {
    if (value == NULL) {
-      fprintf(stderr, "Suboption '%s=<value>' did not have a value\n", tokens[option]);
+      std::cerr << "Suboption '" << tokens[option] << "=<value>' did not have a value" << std::endl;
       abort();
    }
 }
@@ -103,7 +104,7 @@ AgentParameters ParametersParser::parse(char *options) {
           default:
               // Print the unrecognised option name and value.
               // Note: Darwin's getsubopt omits the option name and equals sign from value in this case.
-              fprintf(stderr, "Unknown suboption '%s'\n", value);
+              std::cerr << "Unknown suboption '"<< value << "'" << std::endl;
               break;
         }
      }

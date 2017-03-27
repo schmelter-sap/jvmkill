@@ -61,7 +61,7 @@ void HeapHistogramAction::printHistogram(JNIEnv* jniEnv, std::ostream *outputStr
 
 	jvmtiError err = jvmti->FollowReferences(0, NULL, NULL, &callbacks, this);
 	if (err != JVMTI_ERROR_NONE) {
-		fprintf(stderr, "ERROR: FollowReferences failed: %d\n", err);
+		std::cerr << "ERROR: FollowReferences failed: " << err << std::endl;
 		throw new std::runtime_error("FollowReferences failed");
     }
 
@@ -77,7 +77,7 @@ void HeapHistogramAction::tagLoadedClasses(JNIEnv* jniEnv) {
 	jclass* classes;
 	jvmtiError err = jvmti->GetLoadedClasses(&classCount, &classes);
 	if (err != JVMTI_ERROR_NONE) {
-		fprintf(stderr, "ERROR: GetLoadedClasses failed: %d\n", err);
+		std::cerr << "ERROR: GetLoadedClasses failed: " << err << std::endl;
 		throw new std::runtime_error("GetLoadedClasses failed");
     }
 
@@ -90,7 +90,7 @@ void HeapHistogramAction::tagLoadedClass(JNIEnv* jniEnv, jclass& cls) {
 	char * classSignature;
 	jvmtiError err = jvmti->GetClassSignature(cls, &classSignature, 0);
     if (err != JVMTI_ERROR_NONE) {
-		fprintf(stderr, "ERROR: GetClassSignature failed: %d\n", err);
+		std::cerr << "ERROR: GetClassSignature failed: " << err << std::endl;
 		throw new std::runtime_error("GetClassSignature failed");
     }
 
@@ -98,7 +98,7 @@ void HeapHistogramAction::tagLoadedClass(JNIEnv* jniEnv, jclass& cls) {
 
 	err = jvmti->SetTag(cls, nextClassTag);
 	if (err != JVMTI_ERROR_NONE) {
-		fprintf(stderr, "ERROR: SetTag failed: %d\n", err);
+		std::cerr << "ERROR: SetTag failed: " << err << std::endl;
 		throw new std::runtime_error("SetTag failed");
     }
 
@@ -138,7 +138,7 @@ HeapHistogramAction::HeapHistogramAction(jvmtiEnv *jvm, HeapStatsFactory* factor
 	/* Get/Add JVMTI capabilities */
 	int err = jvm->GetCapabilities(&capabilities);
 	if (err != JVMTI_ERROR_NONE) {
-		fprintf(stderr, "ERROR: GetCapabilities failed: %d\n", err);
+		std::cerr << "ERROR: GetCapabilities failed: " << err << std::endl;
 		throw new std::runtime_error("GetCapabilities failed");
     }
 
@@ -146,7 +146,7 @@ HeapHistogramAction::HeapHistogramAction(jvmtiEnv *jvm, HeapStatsFactory* factor
 
 	err = jvm->AddCapabilities(&capabilities);
 	if (err != JVMTI_ERROR_NONE) {
-		fprintf(stderr, "ERROR: AddCapabilities failed: %d\n", err);
+		std::cerr << "ERROR: AddCapabilities failed: " << err << std::endl;
 		throw new std::runtime_error("AddCapabilities failed");
     }
 

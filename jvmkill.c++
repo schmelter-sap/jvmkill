@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #include <cstring>
+#include <iostream>
 #include "agentcontroller.h"
 
 static AgentController* agentController;
@@ -29,7 +30,7 @@ void resourceExhausted(
 
    err = jvmti_env->RawMonitorEnter(monitorID);
    if (err != JVMTI_ERROR_NONE) {
-      fprintf(stderr, "ERROR: RawMonitorEnter failed: %d\n", err);
+      std::cerr << "ERROR: RawMonitorEnter failed: " << err << std::endl;
       return;
    }
 
@@ -37,7 +38,7 @@ void resourceExhausted(
 
    err = jvmti_env->RawMonitorExit(monitorID);
    if (err != JVMTI_ERROR_NONE) {
-      fprintf(stderr, "ERROR: RawMonitorExit failed: %d\n", err);
+      std::cerr << "ERROR: RawMonitorExit failed: " << err << std::endl;
    }
 }
 
@@ -46,7 +47,7 @@ int setCallbacks(jvmtiEnv *jvmti) {
 
    err = jvmti->CreateRawMonitor("jvmkillMonitor", &monitorID);
    if (err != JVMTI_ERROR_NONE) {
-      fprintf(stderr, "ERROR: CreateRawMonitor failed: %d\n", err);
+      std::cerr << "ERROR: CreateRawMonitor failed: " << err << std::endl;
       return JNI_ERR;
    }
 
@@ -57,13 +58,13 @@ int setCallbacks(jvmtiEnv *jvmti) {
 
    err = jvmti->SetEventCallbacks(&callbacks, sizeof(callbacks));
    if (err != JVMTI_ERROR_NONE) {
-      fprintf(stderr, "ERROR: SetEventCallbacks failed: %d\n", err);
+      std::cerr << "ERROR: SetEventCallbacks failed: " << err << std::endl;
       return JNI_ERR;
    }
 
    err = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_RESOURCE_EXHAUSTED, NULL);
    if (err != JVMTI_ERROR_NONE) {
-      fprintf(stderr, "ERROR: SetEventNotificationMode failed: %d\n", err);
+      std::cerr << "ERROR: SetEventNotificationMode failed: %d" << err << std::endl;
       return JNI_ERR;
    }
 
@@ -77,7 +78,7 @@ Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
 
    jint rc = vm->GetEnv((void **) &jvmti, JVMTI_VERSION);
    if (rc != JNI_OK) {
-      fprintf(stderr, "ERROR: GetEnv failed: %d\n", rc);
+      std::cerr << "ERROR: GetEnv failed: " << rc << std::endl;
       return JNI_ERR;
    }
    agentController = new AgentController(jvmti);
