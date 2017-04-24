@@ -23,6 +23,8 @@ motivated the development of this agent.
 
 # Building
 
+To build the agent and run the tests, issue:
+
     make JAVA_HOME=/path/to/jdk
 
 # Usage
@@ -83,3 +85,9 @@ usage can be disabled.
 
 The jvmkill agent is Open Source software released under the
 [Apache 2.0 license](http://www.apache.org/licenses/LICENSE-2.0.html).
+
+## Development
+
+Please refer to the [Developers' Guide][].
+
+[Developers' Guide]: docs/DEVELOPING.md
