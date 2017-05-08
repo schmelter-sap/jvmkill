@@ -38,10 +38,19 @@ AgentController::AgentController(jvmtiEnv* jvm) {
 }
 
 void AgentController::onOOM(JNIEnv* jniEnv, jint resourceExhaustionFlags) {
+  if ((resourceExhaustionFlags & JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP) == JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP) {
+    std::cerr << "\nResource exhaustion event: the JVM was unable to allocate memory from the heap." << std::endl;
+  }
+  if ((resourceExhaustionFlags & JVMTI_RESOURCE_EXHAUSTED_THREADS) == JVMTI_RESOURCE_EXHAUSTED_THREADS) {
+    std::cerr << "\nResource exhaustion event: the JVM was unable to create a thread." << std::endl;
+  }
+
   if (heuristic->onOOM()) {
     for (int i=0;i<actionCount;i++) {
       actions[i]->act(jniEnv, resourceExhaustionFlags);
     }
+  } else if ((resourceExhaustionFlags & JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR) == JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR) {
+    std::cerr << "\nThe JVM is about to throw a java.lang.OutOfMemoryError." << std::endl;
   }
 }
 
