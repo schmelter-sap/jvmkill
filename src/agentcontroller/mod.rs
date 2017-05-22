@@ -1,5 +1,3 @@
-use ::std::ptr;
-
 pub trait AgentController {
     fn setParameters(&mut self);
 }
