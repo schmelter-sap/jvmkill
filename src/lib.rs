@@ -53,15 +53,21 @@ pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw:
         }
     }
 
-    // register resource exhaustion callback
+    let rc: Result<(), jvmti::jint> = jvmti_env.and_then(|mut ti| {
+        ti.OnResourceExhausted(resourceExhausted);
 
-    let rc : Result<(), jvmti::jint> = jvmti_env.and_then(|mut ti| ti.CreateRawMonitor(String::from("jvmkill"), &RAW_MONITOR_ID));
+        ti.CreateRawMonitor(String::from("jvmkill"), &RAW_MONITOR_ID)});
 
     match rc {
         Ok(_) => 0,
         Err(e) => e
     }
 }
+
+fn resourceExhausted(jvmti_env: env::JVMTIEnv, flags: ::jvmti::jint) {
+    println!("Resource exhausted callback driven!")
+}
+
 
 /*
 int setCallbacks(jvmtiEnv *jvmti) {
