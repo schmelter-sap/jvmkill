@@ -8,9 +8,9 @@ use ::jvmti::jrawMonitorID;
 
 pub trait JVMTI {
     fn CreateRawMonitor(&mut self, name: String, monitor: &Mutex<RawMonitorID>) -> Result<(), ::jvmti::jint>;
-    fn RawMonitorEnter(&mut self, monitor: &Mutex<RawMonitorID>) -> Option<::jvmti::jint>;
-    fn RawMonitorExit(&mut self, monitor: &Mutex<RawMonitorID>) -> Option<::jvmti::jint>;
-    fn OnResourceExhausted(&mut self, callback: FnResourceExhausted) -> Option<::jvmti::jint>;
+    fn RawMonitorEnter(&mut self, monitor: &Mutex<RawMonitorID>) -> Result<(), ::jvmti::jint>;
+    fn RawMonitorExit(&mut self, monitor: &Mutex<RawMonitorID>) -> Result<(), ::jvmti::jint>;
+    fn OnResourceExhausted(&mut self, callback: FnResourceExhausted) -> Result<(), ::jvmti::jint>;
 }
 
 pub struct RawMonitorID {
@@ -27,16 +27,16 @@ impl RawMonitorID {
 
 unsafe impl Send for RawMonitorID {}
 
-#[derive(Clone, Copy)]
-pub struct JVMTIEnv {
-    jvmti: *mut jvmtiEnv
-}
-
-macro_rules! errln (
+macro_rules! eprintln (
     ($($arg:tt)*) => { {
         writeln!(&mut ::std::io::stderr(), $($arg)*).unwrap();
     } }
 );
+
+#[derive(Clone, Copy)]
+pub struct JVMTIEnv {
+    jvmti: *mut jvmtiEnv
+}
 
 impl JVMTIEnv {
     pub fn new(vm: *mut ::jvmti::JavaVM) -> Result<JVMTIEnv, ::jvmti::jint> {
@@ -46,7 +46,7 @@ impl JVMTIEnv {
             rc = (**vm).GetEnv.unwrap()(vm, &mut penv, ::jvmti::JVMTI_VERSION as i32);
         }
         if rc as u32 != ::jvmti::JNI_OK {
-            errln!("ERROR: GetEnv failed: {}", rc);
+            eprintln!("ERROR: GetEnv failed: {}", rc);
             return Err(::jvmti::JNI_ERR);
         }
         Ok(JVMTIEnv { jvmti: penv as *mut jvmtiEnv })
@@ -65,39 +65,39 @@ impl JVMTI for JVMTIEnv {
             rc = createRawMonitor(self.jvmti, CString::new(name).unwrap().into_raw(), monitor.lock().unwrap().id);
         }
         if rc != ::jvmti::jvmtiError::JVMTI_ERROR_NONE {
-            errln!("ERROR: CreateRawMonitor failed: {:?}", rc);
+            eprintln!("ERROR: CreateRawMonitor failed: {:?}", rc);
             return Err(::jvmti::JNI_ERR);
         }
         Ok(())
     }
 
-    fn RawMonitorEnter(&mut self, monitor: &Mutex<RawMonitorID>) -> Option<::jvmti::jint> {
+    fn RawMonitorEnter(&mut self, monitor: &Mutex<RawMonitorID>) -> Result<(), ::jvmti::jint> {
         let rc;
         unsafe {
             let rawMonitorEnter = (**self.jvmti).RawMonitorEnter.unwrap();
             rc = rawMonitorEnter(self.jvmti, *monitor.lock().unwrap().id);
         }
         if rc != ::jvmti::jvmtiError::JVMTI_ERROR_NONE {
-            errln!("ERROR: RawMonitorEnter failed: {:?}", rc);
-            return Some(::jvmti::JNI_ERR);
+            eprintln!("ERROR: RawMonitorEnter failed: {:?}", rc);
+            return Err(::jvmti::JNI_ERR);
         }
-        None
+        Ok(())
     }
 
-    fn RawMonitorExit(&mut self, monitor: &Mutex<RawMonitorID>) -> Option<::jvmti::jint> {
+    fn RawMonitorExit(&mut self, monitor: &Mutex<RawMonitorID>) -> Result<(), ::jvmti::jint> {
         let rc;
         unsafe {
             let rawMonitorExit = (**self.jvmti).RawMonitorExit.unwrap();
             rc = rawMonitorExit(self.jvmti, *monitor.lock().unwrap().id);
         }
         if rc != ::jvmti::jvmtiError::JVMTI_ERROR_NONE {
-            errln!("ERROR: RawMonitorExit failed: {:?}", rc);
-            return Some(::jvmti::JNI_ERR);
+            eprintln!("ERROR: RawMonitorExit failed: {:?}", rc);
+            return Err(::jvmti::JNI_ERR);
         }
-        None
+        Ok(())
     }
 
-    fn OnResourceExhausted(&mut self, callback: FnResourceExhausted) -> Option<::jvmti::jint> {
+    fn OnResourceExhausted(&mut self, callback: FnResourceExhausted) -> Result<(), ::jvmti::jint> {
         unsafe {
             EVENT_CALLBACKS.resource_exhausted = Some(callback);
         }
@@ -145,8 +145,8 @@ impl JVMTI for JVMTIEnv {
             rc = setEventCallbacks(self.jvmti, &callbacks, size_of::<::jvmti::jvmtiEventCallbacks>() as i32);
         }
         if rc != ::jvmti::jvmtiError::JVMTI_ERROR_NONE {
-            errln!("ERROR: RawMonitorExit failed: {:?}", rc);
-            return Some(::jvmti::JNI_ERR);
+            eprintln!("ERROR: RawMonitorExit failed: {:?}", rc);
+            return Err(::jvmti::JNI_ERR);
         }
 
         let rc;
@@ -155,11 +155,11 @@ impl JVMTI for JVMTIEnv {
             rc = setEventNotificationMode(self.jvmti, ::jvmti::jvmtiEventMode::JVMTI_ENABLE, ::jvmti::jvmtiEvent::JVMTI_EVENT_RESOURCE_EXHAUSTED, ::std::ptr::null_mut());
         }
         if rc != ::jvmti::jvmtiError::JVMTI_ERROR_NONE {
-            errln!("ERROR: RawMonitorExit failed: {:?}", rc);
-            return Some(::jvmti::JNI_ERR);
+            eprintln!("ERROR: RawMonitorExit failed: {:?}", rc);
+            return Err(::jvmti::JNI_ERR);
         }
 
-        None
+        Ok(())
     }
 }
 
@@ -172,13 +172,13 @@ unsafe extern "C" fn resource_exhausted(jvmti_env: *mut ::jvmti::jvmtiEnv,
     match EVENT_CALLBACKS.resource_exhausted {
         Some(function) => {
             let jvmti_env = JVMTIEnv::wrap(jvmti_env);
-            function(jvmti_env, flags);
+            function(jvmti_env, JNIEnv::new(jni_env), flags);
         }
         None => println!("No resource exhaustion exit registered")
     }
 }
 
-pub type FnResourceExhausted = fn(jvmti_env: JVMTIEnv, flags: ::jvmti::jint);
+pub type FnResourceExhausted = fn(jvmti_env: JVMTIEnv, jni_env: JNIEnv, flags: ::jvmti::jint);
 
 #[derive(Default, Clone)]
 pub struct EventCallbacks {
@@ -188,3 +188,14 @@ pub struct EventCallbacks {
 pub static mut EVENT_CALLBACKS: EventCallbacks = EventCallbacks {
     resource_exhausted: None
 };
+
+#[derive(Clone, Copy)]
+pub struct JNIEnv {
+    jni: *mut ::jvmti::JNIEnv
+}
+
+impl JNIEnv {
+    pub fn new(jni_env: *mut ::jvmti::JNIEnv) -> JNIEnv {
+           JNIEnv{jni: jni_env}
+    }
+}

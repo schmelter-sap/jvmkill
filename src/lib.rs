@@ -3,12 +3,15 @@
 #![allow(non_snake_case)]
 
 use std::sync::Mutex;
+use std::io::Write;
 
+#[macro_use]
 mod env;
 mod jvmti;
 mod agentcontroller;
 
 use env::JVMTI;
+use agentcontroller::Action;
 
 #[macro_use]
 extern crate lazy_static;
@@ -36,6 +39,10 @@ impl AgentContext {
             None => self.ac = Some(a),
         }
     }
+
+    pub fn onOOM(&self, jni_env: ::env::JNIEnv, resourceExhaustionFlags: ::jvmti::jint) {
+        self.ac.as_ref().map(|a| a.onOOM(jni_env, resourceExhaustionFlags));
+    }
 }
 
 #[no_mangle]
@@ -56,7 +63,8 @@ pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw:
     let rc: Result<(), jvmti::jint> = jvmti_env.and_then(|mut ti| {
         ti.OnResourceExhausted(resourceExhausted);
 
-        ti.CreateRawMonitor(String::from("jvmkill"), &RAW_MONITOR_ID)});
+        ti.CreateRawMonitor(String::from("jvmkill"), &RAW_MONITOR_ID)
+    });
 
     match rc {
         Ok(_) => 0,
@@ -64,39 +72,20 @@ pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw:
     }
 }
 
-fn resourceExhausted(jvmti_env: env::JVMTIEnv, flags: ::jvmti::jint) {
-    println!("Resource exhausted callback driven!")
+fn resourceExhausted(mut jvmti_env: env::JVMTIEnv, jni_env: env::JNIEnv, flags: ::jvmti::jint) {
+    println!("Resource exhausted callback driven!");
+
+    let rc = jvmti_env.RawMonitorEnter(&RAW_MONITOR_ID);
+    if let Err(err) = rc {
+        eprintln!("ERROR: RawMonitorEnter failed: {}", err);
+        return
+    }
+
+    STATIC_CONTEXT.lock().map(|a| a.onOOM(jni_env, flags));
+    
+    let rc = jvmti_env.RawMonitorExit(&RAW_MONITOR_ID);
+    if let Err(err) = rc {
+        eprintln!("ERROR: RawMonitorExit failed: {}", err);
+        return
+    }
 }
-
-
-/*
-int setCallbacks(jvmtiEnv *jvmti) {
-   jvmtiError err;
-
-   err = jvmti->CreateRawMonitor("jvmkillMonitor", &monitorID);
-   if (err != JVMTI_ERROR_NONE) {
-      std::cerr << "ERROR: CreateRawMonitor failed: " << err << std::endl;
-      return JNI_ERR;
-   }
-
-   jvmtiEventCallbacks callbacks;
-   memset(&callbacks, 0, sizeof(callbacks));
-
-   callbacks.ResourceExhausted = &resourceExhausted;
-
-   err = jvmti->SetEventCallbacks(&callbacks, sizeof(callbacks));
-   if (err != JVMTI_ERROR_NONE) {
-      std::cerr << "ERROR: SetEventCallbacks failed: " << err << std::endl;
-      return JNI_ERR;
-   }
-
-   err = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_RESOURCE_EXHAUSTED, NULL);
-   if (err != JVMTI_ERROR_NONE) {
-      std::cerr << "ERROR: SetEventNotificationMode failed: %d" << err << std::endl;
-      return JNI_ERR;
-   }
-
-   return JNI_OK;
-}
-
-*/

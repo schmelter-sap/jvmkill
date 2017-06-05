@@ -10,4 +10,8 @@ impl heapHistogram {
     }
 }
 
-impl super::Action for heapHistogram {}
+impl super::Action for heapHistogram {
+    fn onOOM(&self, jni_env: ::env::JNIEnv, resourceExhaustionFlags: ::jvmti::jint) {
+        println!("in heapHistogram.onOOM");
+    }
+}
