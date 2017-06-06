@@ -34,10 +34,7 @@ impl AgentContext {
     }
 
     pub fn set(&mut self, a: agentcontroller::agentController) {
-        match self.ac {
-            Some(_) => panic!("Agent controller has already been set"),
-            None => self.ac = Some(a),
-        }
+        self.ac = Some(a);
     }
 
     pub fn onOOM(&self, jni_env: ::env::JNIEnv, resourceExhaustionFlags: ::jvmti::jint) {
@@ -50,41 +47,35 @@ impl AgentContext {
 pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw::c_char,
                            reserved: *mut ::std::os::raw::c_void) -> jvmti::jint {
     let jvmti_env = env::JVMTIEnv::new(vm);
-    let ac = jvmti_env.and_then(|ti| agentcontroller::agentController::new(ti));
 
-    match ac {
-        Ok(a) =>
-            STATIC_CONTEXT.lock().unwrap().set(a),
-        Err(e) => {
-            return 1;
-        }
+    if let Err(e) = jvmti_env
+        .and_then(|ti| agentcontroller::agentController::new(ti))
+        .map(|ac| STATIC_CONTEXT.lock().unwrap().set(ac)) {
+        return e;
     }
 
-    let rc: Result<(), jvmti::jint> = jvmti_env.and_then(|mut ti| {
-        ti.OnResourceExhausted(resourceExhausted);
-
-        ti.CreateRawMonitor(String::from("jvmkill"), &RAW_MONITOR_ID)
-    });
-
-    match rc {
-        Ok(_) => 0,
-        Err(e) => e
+    if let Err(e) = jvmti_env
+        .and_then(|mut ti| {
+            ti.OnResourceExhausted(resourceExhausted);
+            ti.CreateRawMonitor(String::from("jvmkill"), &RAW_MONITOR_ID)
+        }) {
+        return e;
     }
+
+    0
 }
 
 fn resourceExhausted(mut jvmti_env: env::JVMTIEnv, jni_env: env::JNIEnv, flags: ::jvmti::jint) {
     println!("Resource exhausted callback driven!");
 
-    let rc = jvmti_env.RawMonitorEnter(&RAW_MONITOR_ID);
-    if let Err(err) = rc {
+    if let Err(err) = jvmti_env.RawMonitorEnter(&RAW_MONITOR_ID) {
         eprintln!("ERROR: RawMonitorEnter failed: {}", err);
         return
     }
 
     STATIC_CONTEXT.lock().map(|a| a.onOOM(jni_env, flags));
-    
-    let rc = jvmti_env.RawMonitorExit(&RAW_MONITOR_ID);
-    if let Err(err) = rc {
+
+    if let Err(err) = jvmti_env.RawMonitorExit(&RAW_MONITOR_ID) {
         eprintln!("ERROR: RawMonitorExit failed: {}", err);
         return
     }

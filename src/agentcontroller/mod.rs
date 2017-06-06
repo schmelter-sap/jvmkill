@@ -26,7 +26,6 @@ impl Action for agentController {
     }
 }
 
-// TODO: use a raw monitor to provide the necessary synchronisation
 unsafe impl Send for agentController {}
 unsafe impl Sync for agentController {}
 
