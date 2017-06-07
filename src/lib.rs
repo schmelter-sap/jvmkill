@@ -18,22 +18,22 @@ extern crate lazy_static;
 extern crate libc;
 
 lazy_static! {
-    static ref STATIC_CONTEXT: Mutex<AgentContext> = Mutex::new(AgentContext::new());
+    static ref STATIC_CONTEXT: Mutex<AgentContext<'static>> = Mutex::new(AgentContext::new());
     static ref RAW_MONITOR_ID: Mutex<env::RawMonitorID> = Mutex::new(env::RawMonitorID::new());
 }
 
-pub struct AgentContext {
-    ac: Option<agentcontroller::agentController>
+pub struct AgentContext<'a> {
+    ac: Option<agentcontroller::agentController<'a>>
 }
 
-impl AgentContext {
-    pub fn new() -> AgentContext {
+impl<'a> AgentContext<'a> {
+    pub fn new() -> AgentContext<'a> {
         AgentContext {
             ac: None,
         }
     }
 
-    pub fn set(&mut self, a: agentcontroller::agentController) {
+    pub fn set(&mut self, a: agentcontroller::agentController<'a>) {
         self.ac = Some(a);
     }
 
@@ -49,7 +49,7 @@ pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw:
     let jvmti_env = env::JVMTIEnv::new(vm);
 
     if let Err(e) = jvmti_env
-        .and_then(|ti| agentcontroller::agentController::new(ti))
+        .and_then(|ti| agentcontroller::agentController::new(ti, options))
         .map(|ac| STATIC_CONTEXT.lock().unwrap().set(ac)) {
         return e;
     }
