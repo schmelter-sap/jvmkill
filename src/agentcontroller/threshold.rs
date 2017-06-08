@@ -24,6 +24,7 @@ impl Threshold {
 
 impl super::Heuristic for Threshold {
     fn on_oom(&mut self) -> bool {
-        unimplemented!()
+        println!("In Threshold.om_oom");
+        true
     }
 }

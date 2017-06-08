@@ -6,12 +6,13 @@ use std::sync::Mutex;
 use std::io::Write;
 
 #[macro_use]
+mod macros;
 mod env;
 mod jvmti;
 mod agentcontroller;
 
 use env::JvmTI;
-use agentcontroller::Action;
+use agentcontroller::MutAction;
 
 #[macro_use]
 extern crate lazy_static;
@@ -36,8 +37,8 @@ impl<'a> AgentContext<'a> {
         self.ac = Some(a);
     }
 
-    pub fn on_oom(&self, jni_env: ::env::JniEnv, resourceExhaustionFlags: ::jvmti::jint) {
-        self.ac.as_ref().map(|a| a.on_oom(jni_env, resourceExhaustionFlags));
+    pub fn on_oom(&mut self, jni_env: ::env::JniEnv, resourceExhaustionFlags: ::jvmti::jint) {
+        self.ac.as_mut().map(|mut a| a.on_oom(jni_env, resourceExhaustionFlags));
     }
 }
 
@@ -72,7 +73,7 @@ fn resource_exhausted(mut jvmti_env: env::JvmTIEnv, jni_env: env::JniEnv, flags:
         return
     }
 
-    STATIC_CONTEXT.lock().map(|a| a.on_oom(jni_env, flags)).unwrap();
+    STATIC_CONTEXT.lock().map(|mut a| a.on_oom(jni_env, flags)).unwrap();
 
     if let Err(err) = jvmti_env.raw_monitor_exit(&RAW_MONITOR_ID) {
         eprintln!("ERROR: RawMonitorExit failed: {}", err);

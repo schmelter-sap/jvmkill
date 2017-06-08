@@ -14,13 +14,18 @@ impl<'a> AgentController<'a> {
     }
 }
 
-impl<'a> super::Action for AgentController<'a> {
-    fn on_oom(&self, jni_env: ::env::JniEnv, resourceExhaustionFlags: ::jvmti::jint) {
-        for action in &self.actions {
-            action.on_oom(jni_env, resourceExhaustionFlags);
+impl<'a> super::MutAction for AgentController<'a> {
+    fn on_oom(&mut self, jni_env: ::env::JniEnv, resourceExhaustionFlags: ::jvmti::jint) {
+        if self.heuristic.on_oom() {
+            for action in &self.actions {
+                action.on_oom(jni_env, resourceExhaustionFlags);
+            }
+        } else {
+
         }
     }
 }
 
 unsafe impl<'a> Send for AgentController<'a> {}
+
 unsafe impl<'a> Sync for AgentController<'a> {}

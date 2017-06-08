@@ -27,12 +27,6 @@ impl RawMonitorId {
 
 unsafe impl Send for RawMonitorId {}
 
-macro_rules! eprintln (
-    ($($arg:tt)*) => { {
-        writeln!(&mut ::std::io::stderr(), $($arg)*).unwrap();
-    } }
-);
-
 #[derive(Clone, Copy)]
 pub struct JvmTIEnv {
     jvmti: *mut jvmtiEnv
