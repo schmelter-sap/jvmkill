@@ -11,7 +11,7 @@ pub struct AgentParameters {
 }
 
 impl AgentParameters {
-    pub fn parseParameters(options: *const ::std::os::raw::c_char) -> AgentParameters {
+    pub fn parseParameters(options: *const ::std::os::raw::c_char) -> Self {
         use std::ffi::CStr;
 
         let mut time_threshold: usize = 1;
@@ -44,7 +44,7 @@ impl AgentParameters {
             }
         }
 
-        AgentParameters {
+        Self {
             time_threshold: time_threshold,
             count_threshold: count_threshold,
             print_heap_histogram: print_heap_histogram != 0,

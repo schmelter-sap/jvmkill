@@ -28,7 +28,7 @@ pub struct AgentContext<'a> {
 }
 
 impl<'a> AgentContext<'a> {
-    pub fn new() -> AgentContext<'a> {
+    pub fn new() -> Self {
         Default::default()
     }
 

@@ -3,8 +3,8 @@ pub struct HeapHistogram {
 }
 
 impl HeapHistogram {
-    pub fn new(jvmti: ::env::JvmTIEnv) -> Result<HeapHistogram, ::jvmti::jint> {
-        Ok(HeapHistogram {
+    pub fn new(jvmti: ::env::JvmTIEnv) -> Result<Self, ::jvmti::jint> {
+        Ok(Self {
             jvmti: jvmti
         })
     }

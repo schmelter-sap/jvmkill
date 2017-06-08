@@ -5,8 +5,8 @@ pub struct AgentController<'a> {
 }
 
 impl<'a> AgentController<'a> {
-    pub fn new(ti: ::env::JvmTIEnv, options: *mut ::std::os::raw::c_char) -> Result<AgentController<'a>, ::jvmti::jint> {
-        self::heaphistogram::HeapHistogram::new(ti).map(|action| AgentController {
+    pub fn new(ti: ::env::JvmTIEnv, options: *mut ::std::os::raw::c_char) -> Result<Self, ::jvmti::jint> {
+        self::heaphistogram::HeapHistogram::new(ti).map(|action| Self {
             jvmti: ti,
             heuristic: Box::new(threshold::Threshold::new(parms::AgentParameters::parseParameters(options))),
             actions: vec![Box::new(action)],
