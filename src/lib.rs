@@ -10,7 +10,7 @@ mod env;
 mod jvmti;
 mod agentcontroller;
 
-use env::JVMTI;
+use env::JvmTI;
 use agentcontroller::Action;
 
 #[macro_use]
@@ -19,26 +19,25 @@ extern crate libc;
 
 lazy_static! {
     static ref STATIC_CONTEXT: Mutex<AgentContext<'static>> = Mutex::new(AgentContext::new());
-    static ref RAW_MONITOR_ID: Mutex<env::RawMonitorID> = Mutex::new(env::RawMonitorID::new());
+    static ref RAW_MONITOR_ID: Mutex<env::RawMonitorId> = Mutex::new(env::RawMonitorId::new());
 }
 
+#[derive(Default)]
 pub struct AgentContext<'a> {
-    ac: Option<agentcontroller::agentController<'a>>
+    ac: Option<agentcontroller::AgentController<'a>>
 }
 
 impl<'a> AgentContext<'a> {
     pub fn new() -> AgentContext<'a> {
-        AgentContext {
-            ac: None,
-        }
+        Default::default()
     }
 
-    pub fn set(&mut self, a: agentcontroller::agentController<'a>) {
+    pub fn set(&mut self, a: agentcontroller::AgentController<'a>) {
         self.ac = Some(a);
     }
 
-    pub fn onOOM(&self, jni_env: ::env::JNIEnv, resourceExhaustionFlags: ::jvmti::jint) {
-        self.ac.as_ref().map(|a| a.onOOM(jni_env, resourceExhaustionFlags));
+    pub fn on_oom(&self, jni_env: ::env::JniEnv, resourceExhaustionFlags: ::jvmti::jint) {
+        self.ac.as_ref().map(|a| a.on_oom(jni_env, resourceExhaustionFlags));
     }
 }
 
@@ -46,18 +45,18 @@ impl<'a> AgentContext<'a> {
 #[allow(unused_variables)]
 pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw::c_char,
                            reserved: *mut ::std::os::raw::c_void) -> jvmti::jint {
-    let jvmti_env = env::JVMTIEnv::new(vm);
+    let jvmti_env = env::JvmTIEnv::new(vm);
 
     if let Err(e) = jvmti_env
-        .and_then(|ti| agentcontroller::agentController::new(ti, options))
+        .and_then(|ti| agentcontroller::AgentController::new(ti, options))
         .map(|ac| STATIC_CONTEXT.lock().unwrap().set(ac)) {
         return e;
     }
 
     if let Err(e) = jvmti_env
         .and_then(|mut ti| {
-            ti.OnResourceExhausted(resourceExhausted);
-            ti.CreateRawMonitor(String::from("jvmkill"), &RAW_MONITOR_ID)
+            ti.on_resource_exhausted(resource_exhausted).unwrap();
+            ti.create_raw_monitor(String::from("jvmkill"), &RAW_MONITOR_ID)
         }) {
         return e;
     }
@@ -65,17 +64,17 @@ pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw:
     0
 }
 
-fn resourceExhausted(mut jvmti_env: env::JVMTIEnv, jni_env: env::JNIEnv, flags: ::jvmti::jint) {
+fn resource_exhausted(mut jvmti_env: env::JvmTIEnv, jni_env: env::JniEnv, flags: ::jvmti::jint) {
     println!("Resource exhausted callback driven!");
 
-    if let Err(err) = jvmti_env.RawMonitorEnter(&RAW_MONITOR_ID) {
+    if let Err(err) = jvmti_env.raw_monitor_enter(&RAW_MONITOR_ID) {
         eprintln!("ERROR: RawMonitorEnter failed: {}", err);
         return
     }
 
-    STATIC_CONTEXT.lock().map(|a| a.onOOM(jni_env, flags));
+    STATIC_CONTEXT.lock().map(|a| a.on_oom(jni_env, flags)).unwrap();
 
-    if let Err(err) = jvmti_env.RawMonitorExit(&RAW_MONITOR_ID) {
+    if let Err(err) = jvmti_env.raw_monitor_exit(&RAW_MONITOR_ID) {
         eprintln!("ERROR: RawMonitorExit failed: {}", err);
         return
     }

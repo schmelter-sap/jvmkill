@@ -1,17 +1,17 @@
-pub struct heapHistogram {
-    jvmti: ::env::JVMTIEnv,
+pub struct HeapHistogram {
+    jvmti: ::env::JvmTIEnv,
 }
 
-impl heapHistogram {
-    pub fn new(jvmti: ::env::JVMTIEnv) -> Result<heapHistogram, ::jvmti::jint> {
-        Ok(heapHistogram {
+impl HeapHistogram {
+    pub fn new(jvmti: ::env::JvmTIEnv) -> Result<HeapHistogram, ::jvmti::jint> {
+        Ok(HeapHistogram {
             jvmti: jvmti
         })
     }
 }
 
-impl super::Action for heapHistogram {
-    fn onOOM(&self, jni_env: ::env::JNIEnv, resourceExhaustionFlags: ::jvmti::jint) {
-        println!("in heapHistogram.onOOM");
+impl super::Action for HeapHistogram {
+    fn on_oom(&self, jni_env: ::env::JniEnv, resourceExhaustionFlags: ::jvmti::jint) {
+        println!("in heapHistogram.on_oom");
     }
 }
