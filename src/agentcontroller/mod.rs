@@ -6,6 +6,7 @@ pub trait MutAction {
 }
 
 mod heaphistogram;
+mod kill;
 mod threshold;
 mod parms;
 

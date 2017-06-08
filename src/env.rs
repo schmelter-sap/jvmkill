@@ -1,4 +1,3 @@
-use ::std::io::Write;
 use std::mem::size_of;
 use ::std::ptr;
 use ::std::ffi::CString;
@@ -28,12 +27,12 @@ impl RawMonitorId {
 unsafe impl Send for RawMonitorId {}
 
 #[derive(Clone, Copy)]
-pub struct JvmTIEnv {
+pub struct JvmTiEnv {
     jvmti: *mut jvmtiEnv
 }
 
-impl JvmTIEnv {
-    pub fn new(vm: *mut ::jvmti::JavaVM) -> Result<JvmTIEnv, ::jvmti::jint> {
+impl JvmTiEnv {
+    pub fn new(vm: *mut ::jvmti::JavaVM) -> Result<JvmTiEnv, ::jvmti::jint> {
         let mut penv: *mut ::std::os::raw::c_void = ptr::null_mut();
         let rc;
         unsafe {
@@ -43,15 +42,15 @@ impl JvmTIEnv {
             eprintln!("ERROR: GetEnv failed: {}", rc);
             return Err(::jvmti::JNI_ERR);
         }
-        Ok(JvmTIEnv { jvmti: penv as *mut jvmtiEnv })
+        Ok(JvmTiEnv { jvmti: penv as *mut jvmtiEnv })
     }
 
-    pub fn wrap(jvmti_env: *mut jvmtiEnv) -> JvmTIEnv {
-        JvmTIEnv { jvmti: jvmti_env }
+    pub fn wrap(jvmti_env: *mut jvmtiEnv) -> JvmTiEnv {
+        JvmTiEnv { jvmti: jvmti_env }
     }
 }
 
-impl JvmTI for JvmTIEnv {
+impl JvmTI for JvmTiEnv {
     fn create_raw_monitor(&mut self, name: String, monitor: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint> {
         let rc;
         unsafe {
@@ -165,14 +164,14 @@ unsafe extern "C" fn resource_exhausted(jvmti_env: *mut ::jvmti::jvmtiEnv,
                                         description: *const ::std::os::raw::c_char) -> () {
     match EVENT_CALLBACKS.resource_exhausted {
         Some(function) => {
-            let jvmti_env = JvmTIEnv::wrap(jvmti_env);
+            let jvmti_env = JvmTiEnv::wrap(jvmti_env);
             function(jvmti_env, JniEnv::new(jni_env), flags);
         }
         None => println!("No resource exhaustion exit registered")
     }
 }
 
-pub type FnResourceExhausted = fn(jvmti_env: JvmTIEnv, jni_env: JniEnv, flags: ::jvmti::jint);
+pub type FnResourceExhausted = fn(jvmti_env: JvmTiEnv, jni_env: JniEnv, flags: ::jvmti::jint);
 
 #[derive(Default, Clone)]
 pub struct EventCallbacks {

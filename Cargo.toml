@@ -12,8 +12,11 @@ crate_type = [ "cdylib", "dylib", "rlib" ]
 
 [dependencies]
 libc = "0.2.*"
-#time = "0.1.*"
+time = "0.1.*"
 lazy_static = "0.2.*"
+
+[dev-dependencies]
+nix = "0.8.1"
 
 [build-dependencies]
 bindgen = "0.24"

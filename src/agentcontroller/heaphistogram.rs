@@ -1,9 +1,9 @@
 pub struct HeapHistogram {
-    jvmti: ::env::JvmTIEnv,
+    jvmti: ::env::JvmTiEnv,
 }
 
 impl HeapHistogram {
-    pub fn new(jvmti: ::env::JvmTIEnv) -> Result<Self, ::jvmti::jint> {
+    pub fn new(jvmti: ::env::JvmTiEnv) -> Result<Self, ::jvmti::jint> {
         Ok(Self {
             jvmti: jvmti
         })
@@ -12,6 +12,5 @@ impl HeapHistogram {
 
 impl super::Action for HeapHistogram {
     fn on_oom(&self, jni_env: ::env::JniEnv, resourceExhaustionFlags: ::jvmti::jint) {
-        println!("in heapHistogram.on_oom");
     }
 }

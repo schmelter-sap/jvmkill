@@ -3,7 +3,6 @@
 #![allow(non_snake_case)]
 
 use std::sync::Mutex;
-use std::io::Write;
 
 #[macro_use]
 mod macros;
@@ -17,6 +16,7 @@ use agentcontroller::MutAction;
 #[macro_use]
 extern crate lazy_static;
 extern crate libc;
+extern crate time;
 
 lazy_static! {
     static ref STATIC_CONTEXT: Mutex<AgentContext<'static>> = Mutex::new(AgentContext::new());
@@ -46,7 +46,7 @@ impl<'a> AgentContext<'a> {
 #[allow(unused_variables)]
 pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw::c_char,
                            reserved: *mut ::std::os::raw::c_void) -> jvmti::jint {
-    let jvmti_env = env::JvmTIEnv::new(vm);
+    let jvmti_env = env::JvmTiEnv::new(vm);
 
     if let Err(e) = jvmti_env
         .and_then(|ti| agentcontroller::controller::AgentController::new(ti, options))
@@ -65,7 +65,7 @@ pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw:
     0
 }
 
-fn resource_exhausted(mut jvmti_env: env::JvmTIEnv, jni_env: env::JniEnv, flags: ::jvmti::jint) {
+fn resource_exhausted(mut jvmti_env: env::JvmTiEnv, jni_env: env::JniEnv, flags: ::jvmti::jint) {
     println!("Resource exhausted callback driven!");
 
     if let Err(err) = jvmti_env.raw_monitor_enter(&RAW_MONITOR_ID) {
