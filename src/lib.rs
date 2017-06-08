@@ -24,7 +24,7 @@ lazy_static! {
 
 #[derive(Default)]
 pub struct AgentContext<'a> {
-    ac: Option<agentcontroller::AgentController<'a>>
+    ac: Option<agentcontroller::controller::AgentController<'a>>
 }
 
 impl<'a> AgentContext<'a> {
@@ -32,7 +32,7 @@ impl<'a> AgentContext<'a> {
         Default::default()
     }
 
-    pub fn set(&mut self, a: agentcontroller::AgentController<'a>) {
+    pub fn set(&mut self, a: agentcontroller::controller::AgentController<'a>) {
         self.ac = Some(a);
     }
 
@@ -48,7 +48,7 @@ pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw:
     let jvmti_env = env::JvmTIEnv::new(vm);
 
     if let Err(e) = jvmti_env
-        .and_then(|ti| agentcontroller::AgentController::new(ti, options))
+        .and_then(|ti| agentcontroller::controller::AgentController::new(ti, options))
         .map(|ac| STATIC_CONTEXT.lock().unwrap().set(ac)) {
         return e;
     }
