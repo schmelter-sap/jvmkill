@@ -159,13 +159,41 @@ bool testsParsesDefaultPrintMemoryUsage() {
    return passed;
 }
 
+bool testsParsesDumpHeapPathProvided() {
+   AgentParameters params = parser->parse(strdup("dumpHeapPath=/some/dir"));
+   bool passed = (strcmp(params.heap_dump_path, "/some/dir") == 0);
+   if (!passed) {
+      fprintf(stdout, "testsParsesDumpHeapPathProvided FAILED\n");
+   }
+   return passed;
+}
+
+bool testsParsesDumpHeapPathOmitted() {
+   AgentParameters params = parser->parse(strdup(""));
+   bool passed = (params.heap_dump_path == NULL);
+   if (!passed) {
+      fprintf(stdout, "testsParsesDumpHeapPathOmitted FAILED\n");
+   }
+   return passed;
+}
+
+bool testsParsesDefaultDumpHeapPath() {
+   AgentParameters params = parser->parse(strdup("dumpHeapPath="));
+   bool passed = (strcmp(params.heap_dump_path, "") == 0);
+   if (!passed) {
+      fprintf(stdout, "testsParsesDefaultDumpHeapPath FAILED\n");
+   }
+   return passed;
+}
+
 int main() {
 	setup();
 	bool result = testsDefaults() &&
 	   testsParsesTimeThreshold() && testsParsesDefaultTimeThreshold() &&
 	   testsParsesCountThreshold() && testsParsesDefaultCountThreshold() &&
 	   testsParsesPrintHeapHistogramOn() && testsParsesPrintHeapHistogramOff() && testsParsesDefaultPrintHeapHistogram() &&
-	   testsParsesHeapHistogramMaxEntries() && testsParsesHeapHistogramMaxEntriesUnlimited() && testsParsesDefaultHeapHistogramMaxEntries();
+	   testsParsesHeapHistogramMaxEntries() && testsParsesHeapHistogramMaxEntriesUnlimited() && testsParsesDefaultHeapHistogramMaxEntries() &&
+	   testsParsesDumpHeapPathProvided() && testsParsesDumpHeapPathOmitted() && testsParsesDefaultDumpHeapPath();
 	teardown();
 	if (result) {
        fprintf(stdout, "SUCCESS\n");

@@ -26,12 +26,15 @@
 #include "killaction.h"
 #include "poolstatsaction.h"
 #include "heaphistogramaction.h"
+#include "heapdumpaction.h"
 #include "heapstatshashtable.h"
 #include "action.h"
 
 static int ActionRunCounter = 0;
 
 static int MockPrintHeapActionCount = 0;
+static int MockHeapDumpActionCount = 0;
+static int MockHeapDumpActionRunOrder = -1;
 static int MockKillActionRunOrder = -1;
 static int MockPoolStatsActionRunOrder = -1;
 static jint MockPoolStatsActionFlags = 0;
@@ -46,6 +49,9 @@ JNIEnv* mockJNIEnv;
 /************************************************
  *  mocks
  ************************************************/
+
+// HeapHistogramAction
+
 HeapHistogramAction::HeapHistogramAction(jvmtiEnv* jvm, HeapStatsFactory* factory) {
 	MockPrintHeapActionCount++;
 }
@@ -56,7 +62,18 @@ void HeapHistogramAction::act(JNIEnv* jniEnv, jint resourceExhaustionFlags) {
 	MockPrintHeapActionFlags = resourceExhaustionFlags;
 }
 
-//PoolStatsAction
+// HeapDumpAction
+
+HeapDumpAction::HeapDumpAction(char* heapDumpPath) {
+	MockHeapDumpActionCount++;
+}
+HeapDumpAction::~HeapDumpAction() {
+}
+void HeapDumpAction::act(JNIEnv* jniEnv, jint resourceExhaustionFlags) {
+	MockHeapDumpActionRunOrder = ActionRunCounter++;
+}
+
+// PoolStatsAction
 
 PoolStatsAction::PoolStatsAction() {
 	MockPoolStatsActionCount++;
@@ -68,7 +85,7 @@ void PoolStatsAction::act(JNIEnv* jniEnv, jint resourceExhaustionFlags) {
 	MockPoolStatsActionFlags = resourceExhaustionFlags;
 }
 
-//KillAction
+// KillAction
 
 KillAction::KillAction() {
 	MockKillActionCount++;
@@ -77,7 +94,7 @@ void KillAction::act(JNIEnv* jniEnv, jint resourceExhaustionFlags) {
 	MockKillActionRunOrder = ActionRunCounter++;
 }
 
-//ParameterParser
+// ParameterParser
 
 ParametersParser::ParametersParser() {
 }
@@ -87,7 +104,7 @@ AgentParameters ParametersParser::parse(char *options) {
 	return agentParameters;
 }
 
-//Threshold
+// Threshold
 Threshold::Threshold(AgentParameters param) {
 }
 
@@ -106,7 +123,7 @@ bool Threshold::onOOM() {
    return ++MockThresholdEventCount > 1;
 }
 
-//HeapStatsHashtable
+// HeapStatsHashtable
 HeapStatsHashtable::HeapStatsHashtable(int maxEntries) {}
 
 HeapStatsHashtable::~HeapStatsHashtable() {}
@@ -123,6 +140,8 @@ void setup() {
     ActionRunCounter = 0;
 
     MockPrintHeapActionCount = 0;
+    MockHeapDumpActionCount = 0;
+    MockHeapDumpActionRunOrder = -1;
     MockKillActionRunOrder = -1;
     MockPoolStatsActionRunOrder = -1;
     MockPoolStatsActionFlags = 0;
@@ -150,7 +169,6 @@ bool testAlwaysAddsKillAction() {
 	return passed;
 }
 
-
 bool testDoesNotAddHeapActionWhenOff() {
 	setup();
 	AgentParameters params;
@@ -170,6 +188,32 @@ bool testAddsHeapActionWhenOn() {
 	params.print_heap_histogram = true;
 	agentController->setParameters(params);
 	bool passed = (MockPrintHeapActionCount == 1);
+    if (!passed) {
+        fprintf(stdout, "testAddsHeapActionWhenOn FAILED\n");
+    }
+	teardown();
+	return passed;
+}
+
+bool testDoesNotAddHeapDumpActionWhenOff() {
+	setup();
+	AgentParameters params;
+	params.heap_dump_path = NULL;
+	agentController->setParameters(params);
+    bool passed = (MockHeapDumpActionCount == 0);
+    if (!passed) {
+        fprintf(stdout, "testDoesNotAddHeapDumpActionWhenOff FAILED\n");
+    }
+	teardown();
+	return passed;
+}
+
+bool testAddsHeapDumpActionWhenOn() {
+	setup();
+	AgentParameters params;
+    params.heap_dump_path = (char*)"/tmp/jbp";
+	agentController->setParameters(params);
+	bool passed = (MockHeapDumpActionCount == 1);
     if (!passed) {
         fprintf(stdout, "testAddsHeapActionWhenOn FAILED\n");
     }
@@ -208,12 +252,14 @@ bool testRunsAllActionsInCorrectOrderOnOOM() {
 	AgentParameters params;
 	params.print_heap_histogram = true;
 	params.print_memory_usage = true;
+	params.heap_dump_path = (char*)"/tmp/jbp";
 	agentController->setParameters(params);
 
 	//MockThreshold returns true for OOM on second attempt, therefore should not
 	//run actions on first call
 	agentController->onOOM(mockJNIEnv, 5);
 	bool firstAssertions = ((MockPrintHeapActionRunOrder == -1) &&
+	    (MockHeapDumpActionRunOrder == -1) &&
 	    (MockPoolStatsActionRunOrder == -1) &&
 	    (MockKillActionRunOrder == -1) &&
 		(MockThresholdEventCount == 1));
@@ -221,9 +267,10 @@ bool testRunsAllActionsInCorrectOrderOnOOM() {
 	agentController->onOOM(mockJNIEnv, 5);
     bool passed = ((MockPrintHeapActionRunOrder == 0) &&
         (MockPrintHeapActionFlags == 5) &&
-        (MockPoolStatsActionRunOrder == 1) &&
+        (MockHeapDumpActionRunOrder == 1) &&
+        (MockPoolStatsActionRunOrder == 2) &&
         (MockPoolStatsActionFlags == 5) &&
-	    (MockKillActionRunOrder == 2) &&
+	    (MockKillActionRunOrder == 3) &&
 		(MockThresholdEventCount > 1) &&
 		(firstAssertions));
     if (!passed) {
@@ -237,6 +284,7 @@ bool testRunsOnlyEnabledActionsOnOOM() {
 	setup();
 	AgentParameters params;
 	params.print_heap_histogram = false;
+	params.heap_dump_path = NULL;
 	params.print_memory_usage = false;
 	agentController->setParameters(params);
 
@@ -265,6 +313,8 @@ bool testRunsOnlyEnabledActionsOnOOM() {
 int main() {
 	bool result = (testDoesNotAddHeapActionWhenOff() &&
 				   testAddsHeapActionWhenOn() &&
+				   testDoesNotAddHeapDumpActionWhenOff() &&
+				   testAddsHeapDumpActionWhenOn() &&
 				   testDoesNotAddPoolStatsActionWhenOff() &&
 				   testAddsPoolStatsActionWhenOn() &&
 				   testRunsAllActionsInCorrectOrderOnOOM() &&

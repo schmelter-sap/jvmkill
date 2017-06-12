@@ -36,6 +36,7 @@ enum {
     PRINT_HEAP_HISTOGRAM_OPT,
     HEAP_HISTOGRAM_MAX_ENTRIES_OPT,
     PRINT_MEMORY_USAGE_OPT,
+    DUMP_HEAP_PATH_OPT,
     THE_END
 };
 
@@ -45,6 +46,7 @@ char *tokens[] = {
     [PRINT_HEAP_HISTOGRAM_OPT] = strdup("printHeapHistogram"),
     [HEAP_HISTOGRAM_MAX_ENTRIES_OPT] = strdup("heapHistogramMaxEntries"),
     [PRINT_MEMORY_USAGE_OPT] = strdup("printMemoryUsage"),
+    [DUMP_HEAP_PATH_OPT] = strdup("dumpHeapPath"),
     [THE_END] = NULL
 };
 
@@ -66,6 +68,7 @@ AgentParameters ParametersParser::parse(char *options) {
   result.print_heap_histogram = DEFAULT_PRINT_HEAP_HISTOGRAM;
   result.heap_histogram_max_entries = DEFAULT_HEAP_HISTOGRAM_MAX_ENTRIES;
   result.print_memory_usage = DEFAULT_PRINT_MEMORY_USAGE;
+  result.heap_dump_path = NULL;
 
   if (options != NULL) {
      // Copy input options since getsubopt modifies its input
@@ -84,6 +87,11 @@ AgentParameters ParametersParser::parse(char *options) {
            case TIME_OPT:
               checkValueProvided(value, TIME_OPT);
               result.time_threshold = (strlen(value) == 0) ? DEFAULT_TIME_THRESHOLD : atoi(value);
+              break;
+
+          case DUMP_HEAP_PATH_OPT:
+              checkValueProvided(value, DUMP_HEAP_PATH_OPT);
+              result.heap_dump_path = strdup(value);
               break;
 
           case PRINT_HEAP_HISTOGRAM_OPT:

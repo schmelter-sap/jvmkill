@@ -24,12 +24,13 @@
 #include "threshold.h"
 #include "agentcontroller.h"
 #include "heaphistogramaction.h"
+#include "heapdumpaction.h"
 #include "poolstatsaction.h"
 #include "heapstatshashtable.h"
 #include "killaction.h"
 #include "parametersparser.h"
 
-#define MAX_ACTIONS 3
+#define MAX_ACTIONS 4
 
 AgentController::AgentController(jvmtiEnv* jvm) {
   jvmti = jvm;
@@ -64,6 +65,9 @@ void AgentController::setParameters(AgentParameters parameters) {
   actionCount = 0;
   if (parameters.print_heap_histogram) {
       actions[actionCount++] = new HeapHistogramAction(jvmti, new HeapStatsHashtableFactory(parameters.heap_histogram_max_entries));
+  }
+  if (parameters.heap_dump_path != NULL) {
+      actions[actionCount++] = new HeapDumpAction(parameters.heap_dump_path);
   }
   if (parameters.print_memory_usage) {
       actions[actionCount++] = new PoolStatsAction();

@@ -43,12 +43,35 @@ The parameters should be passed as a comma separated string. Eg.: count=2,time=1
 The agent accepts the following parameters:
 
 ## count
+
 Configures the limit of resourceExhausted events that can be fired in the configured
 time interval. Defaults to 0 if not provided (JVM is killed with a single fired event).
 
 ## time
+
 Configures the time limit (in seconds) in which resourceExhausted events are kept in 
 the counter. Defaults to 1 if not provided.
+
+## heapDumpPath
+
+Configures a file to which a heap dump is written before the agent kills the JVM.
+
+To enable heap dump generation, set the parameter to the path of a file in a writable directory with sufficient free space.
+The path may be absolute or relative to the working directory where the JVM was started.
+If the parameter is not specified, no heap dump is generated.
+
+The path is treated as a [strftime](https://linux.die.net/man/3/strftime) format specification,
+although the precise set of format codes supported depends on the platform.
+For example, the string "%a-%d-%b-%Y-%T-%z" approximates the date format of RFC 2822 while avoiding embedded spaces
+(which are awkward in agent parameters).
+
+A heap dump (of live objects only) is generated if a path is specified _and_ the 
+[HotSpot Diagnostic MXBean](https://docs.oracle.com/javase/8/docs/jre/api/management/extension/com/sun/management/HotSpotDiagnosticMXBean.html)
+is available.
+If the parent directories of the path do not exist, they are created.
+
+If the file exists before the heap dump is produced, it is overwritten. Including the date and time
+in the file path, using strftime format codes, may reduce the risk that the file already exists.
 
 ## printHeapHistogram
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 the original author or authors.
+ * Copyright (c) 2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,22 @@
  * limitations under the License.
  */
 
-#ifndef parameters_h
-#define parameters_h
+#ifndef heapdumpaction_h
+#define heapdumpaction_h
 
-/**
- * Struct that holds agent configuration
- */
-struct AgentParameters {
-   int time_threshold;
-   int count_threshold;
-   bool print_heap_histogram;
-   int heap_histogram_max_entries;
-   bool print_memory_usage;
-   char* heap_dump_path;
+#include "action.h"
+
+class HeapDumpAction: public Action
+{
+public:
+   HeapDumpAction(char* heapDumpPath);
+
+   virtual ~HeapDumpAction();
+
+   void act(JNIEnv* jniEnv, jint resourceExhaustionFlags);
+
+private:
+   char* heapDumpPath;
 };
 
-#endif // parameters_h
+#endif // heapdumpaction_h
