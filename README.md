@@ -25,11 +25,11 @@ motivated the development of this agent.
 
 A prototype agent written in Rust is being prototyped. To build it, issue:
 
-    cargo build
+    cargo build --release
     
 and to test it, issue:
 
-    cargo test
+    cargo test --all
     
 # Building
 
