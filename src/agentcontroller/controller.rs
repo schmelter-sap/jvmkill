@@ -28,6 +28,15 @@ impl<'a> AgentController<'a> {
 
 impl<'a> super::MutAction for AgentController<'a> {
     fn on_oom(&mut self, jni_env: ::env::JniEnv, resourceExhaustionFlags: ::jvmti::jint) {
+        let heap_exhausted = ::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as ::jvmti::jint;
+        let threads_exhausted = ::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as ::jvmti::jint;
+        if resourceExhaustionFlags & heap_exhausted == heap_exhausted {
+            eprintln!("\nResource exhaustion event: the JVM was unable to allocate memory from the heap.");
+        }
+        if resourceExhaustionFlags & threads_exhausted == threads_exhausted {
+            eprintln!("\nResource exhaustion event: the JVM was unable to create a thread.");
+        }
+
         if self.heuristic.on_oom() {
             for action in &self.actions {
                 action.on_oom(jni_env, resourceExhaustionFlags);

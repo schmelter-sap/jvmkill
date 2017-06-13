@@ -66,8 +66,6 @@ pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw:
 }
 
 fn resource_exhausted(mut jvmti_env: env::JvmTiEnv, jni_env: env::JniEnv, flags: ::jvmti::jint) {
-    println!("Resource exhausted callback driven!");
-
     if let Err(err) = jvmti_env.raw_monitor_enter(&RAW_MONITOR_ID) {
         eprintln!("ERROR: RawMonitorEnter failed: {}", err);
         return
