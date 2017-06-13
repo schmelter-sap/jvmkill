@@ -32,7 +32,9 @@ impl<'a> super::MutAction for AgentController<'a> {
             for action in &self.actions {
                 action.on_oom(jni_env, resourceExhaustionFlags);
             }
-        } else {}
+        } else {
+            eprintln!("\nThe JVM is about to throw a java.lang.OutOfMemoryError.");
+        }
     }
 }
 
