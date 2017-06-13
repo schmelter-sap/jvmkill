@@ -36,7 +36,7 @@ enum {
     PRINT_HEAP_HISTOGRAM_OPT,
     HEAP_HISTOGRAM_MAX_ENTRIES_OPT,
     PRINT_MEMORY_USAGE_OPT,
-    DUMP_HEAP_PATH_OPT,
+    HEAP_DUMP_PATH_OPT,
     THE_END
 };
 
@@ -46,7 +46,7 @@ char *tokens[] = {
     [PRINT_HEAP_HISTOGRAM_OPT] = strdup("printHeapHistogram"),
     [HEAP_HISTOGRAM_MAX_ENTRIES_OPT] = strdup("heapHistogramMaxEntries"),
     [PRINT_MEMORY_USAGE_OPT] = strdup("printMemoryUsage"),
-    [DUMP_HEAP_PATH_OPT] = strdup("dumpHeapPath"),
+    [HEAP_DUMP_PATH_OPT] = strdup("heapDumpPath"),
     [THE_END] = NULL
 };
 
@@ -89,8 +89,8 @@ AgentParameters ParametersParser::parse(char *options) {
               result.time_threshold = (strlen(value) == 0) ? DEFAULT_TIME_THRESHOLD : atoi(value);
               break;
 
-          case DUMP_HEAP_PATH_OPT:
-              checkValueProvided(value, DUMP_HEAP_PATH_OPT);
+          case HEAP_DUMP_PATH_OPT:
+              checkValueProvided(value, HEAP_DUMP_PATH_OPT);
               result.heap_dump_path = strdup(value);
               break;
 

@@ -90,7 +90,7 @@ memtest-10-2: build
 	@echo "=============================================="
 	$(JAVA_HOME)/bin/javac JvmKillTest.java
 	!($(JAVA_HOME)/bin/java -Xmx5m \
-	    -agentpath:$(PWD)/$(TARGET)=time=10,count=2,dumpHeapPath=/tmp/jbp/dump-%a-%d-%b-%Y-%T-%z.hprof,printHeapHistogram=1,heapHistogramMaxEntries=10 \
+	    -agentpath:$(PWD)/$(TARGET)=time=10,count=2,heapDumpPath=/tmp/jbp/dump-%a-%d-%b-%Y-%T-%z.hprof,printHeapHistogram=1,heapHistogramMaxEntries=10 \
 	    -cp $(PWD) JvmKillTest)
 
 threadtestbasic: build

@@ -160,7 +160,7 @@ bool testsParsesDefaultPrintMemoryUsage() {
 }
 
 bool testsParsesDumpHeapPathProvided() {
-   AgentParameters params = parser->parse(strdup("dumpHeapPath=/some/dir"));
+   AgentParameters params = parser->parse(strdup("heapDumpPath=/some/dir"));
    bool passed = (strcmp(params.heap_dump_path, "/some/dir") == 0);
    if (!passed) {
       fprintf(stdout, "testsParsesDumpHeapPathProvided FAILED\n");
@@ -178,7 +178,7 @@ bool testsParsesDumpHeapPathOmitted() {
 }
 
 bool testsParsesDefaultDumpHeapPath() {
-   AgentParameters params = parser->parse(strdup("dumpHeapPath="));
+   AgentParameters params = parser->parse(strdup("heapDumpPath="));
    bool passed = (strcmp(params.heap_dump_path, "") == 0);
    if (!passed) {
       fprintf(stdout, "testsParsesDefaultDumpHeapPath FAILED\n");
