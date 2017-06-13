@@ -24,7 +24,7 @@ lazy_static! {
 }
 
 #[derive(Default)]
-pub struct AgentContext<'a> {
+struct AgentContext<'a> {
     ac: Option<agentcontroller::controller::AgentController<'a>>
 }
 
@@ -68,13 +68,13 @@ pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw:
 fn resource_exhausted(mut jvmti_env: env::JvmTiEnv, jni_env: env::JniEnv, flags: ::jvmti::jint) {
     if let Err(err) = jvmti_env.raw_monitor_enter(&RAW_MONITOR_ID) {
         eprintln!("ERROR: RawMonitorEnter failed: {}", err);
-        return
+        return;
     }
 
     STATIC_CONTEXT.lock().map(|mut a| a.on_oom(jni_env, flags)).unwrap();
 
     if let Err(err) = jvmti_env.raw_monitor_exit(&RAW_MONITOR_ID) {
         eprintln!("ERROR: RawMonitorExit failed: {}", err);
-        return
+        return;
     }
 }
