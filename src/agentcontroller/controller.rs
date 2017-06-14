@@ -43,21 +43,23 @@ impl<'a> AgentController<'a> {
 }
 
 impl<'a> super::MutAction for AgentController<'a> {
-    fn on_oom(&mut self, jni_env: ::env::JniEnv, resourceExhaustionFlags: ::jvmti::jint) {
-        let heap_exhausted = ::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as ::jvmti::jint;
-        let threads_exhausted = ::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as ::jvmti::jint;
-        if resourceExhaustionFlags & heap_exhausted == heap_exhausted {
+    fn on_oom(&mut self, jni_env: ::env::JniEnv, resource_exhaustion_flags: ::jvmti::jint) {
+        const heap_exhausted: ::jvmti::jint = ::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as ::jvmti::jint;
+        const threads_exhausted: ::jvmti::jint = ::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as ::jvmti::jint;
+        const oom_error: ::jvmti::jint = ::jvmti::JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR as ::jvmti::jint;
+
+        if resource_exhaustion_flags & heap_exhausted == heap_exhausted {
             eprintln!("\nResource exhaustion event: the JVM was unable to allocate memory from the heap.");
         }
-        if resourceExhaustionFlags & threads_exhausted == threads_exhausted {
+        if resource_exhaustion_flags & threads_exhausted == threads_exhausted {
             eprintln!("\nResource exhaustion event: the JVM was unable to create a thread.");
         }
 
         if self.heuristic.on_oom() {
             for action in &self.actions {
-                action.on_oom(jni_env, resourceExhaustionFlags);
+                action.on_oom(jni_env, resource_exhaustion_flags);
             }
-        } else {
+        } else if resource_exhaustion_flags & oom_error == oom_error {
             eprintln!("\nThe JVM is about to throw a java.lang.OutOfMemoryError.");
         }
     }

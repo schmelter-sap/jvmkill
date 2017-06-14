@@ -27,6 +27,6 @@ impl HeapHistogram {
 }
 
 impl super::Action for HeapHistogram {
-    fn on_oom(&self, jni_env: ::env::JniEnv, resourceExhaustionFlags: ::jvmti::jint) {
+    fn on_oom(&self, jni_env: ::env::JniEnv, resource_exhaustion_flags: ::jvmti::jint) {
     }
 }
