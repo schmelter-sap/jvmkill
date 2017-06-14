@@ -30,6 +30,7 @@ impl Kill {
         }
     }
 
+    #[cfg(test)]
     pub fn setSignal(&mut self, signal: c_int) {
         self.signal = signal;
     }
@@ -93,7 +94,7 @@ mod tests {
                                                 signal::SaFlags::empty(),
                                                 signal::SigSet::empty());
         unsafe {
-            signal::sigaction(signal::SIGUSR1, &sig_action);
+            signal::sigaction(signal::SIGUSR1, &sig_action).unwrap();
         }
     }
 }

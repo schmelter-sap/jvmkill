@@ -90,7 +90,7 @@ mod tests {
         assert!(!threshold.on_oom());
         assert!(!threshold.on_oom());
 
-        thread::sleep(time::Duration::from_millis(1000));
+        thread::sleep(time::Duration::from_millis(1100));
 
         assert!(!threshold.on_oom());
         assert!(!threshold.on_oom());

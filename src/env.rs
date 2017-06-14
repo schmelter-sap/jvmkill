@@ -15,17 +15,26 @@
  */
 
 use std::mem::size_of;
+use std::mem::transmute;
 use ::std::ptr;
 use ::std::ffi::CString;
+use ::std::ffi::CStr;
 use ::std::sync::Mutex;
 use ::jvmti::jvmtiEnv;
 use ::jvmti::jrawMonitorID;
+use ::heap::tagger::Tag;
 
 pub trait JvmTI {
+    // TODO: rework the following methods not to return values since they only ever return Ok(()) or panic.
     fn create_raw_monitor(&mut self, name: String, monitor: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint>;
     fn raw_monitor_enter(&mut self, monitor: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint>;
     fn raw_monitor_exit(&mut self, monitor: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint>;
     fn on_resource_exhausted(&mut self, callback: FnResourceExhausted) -> Result<(), ::jvmti::jint>;
+    fn enable_object_tagging(&mut self) -> Result<(), ::jvmti::jint>;
+    fn tag_loaded_classes(&self, tagger: &mut Tag);
+
+    // Restriction: traverse_live_heap may be called at most once in the lifetime of a JVM.
+    fn traverse_live_heap<F>(&self, closure: F) where F: FnMut(::jvmti::jlong, ::jvmti::jlong);
 }
 
 pub struct RawMonitorId {
@@ -66,43 +75,37 @@ impl JvmTiEnv {
     }
 }
 
-impl JvmTI for JvmTiEnv {
-    fn create_raw_monitor(&mut self, name: String, monitor: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint> {
+macro_rules! jvmtifn (
+    ($r:expr, $f:ident, $($arg:tt)*) => { {
         let rc;
+        #[allow(unused_unsafe)] // suppress warning if used inside unsafe block
         unsafe {
-            let create_raw_monitor_fn = (**self.jvmti).CreateRawMonitor.unwrap();
-            rc = create_raw_monitor_fn(self.jvmti, CString::new(name).unwrap().into_raw(), monitor.lock().unwrap().id);
+            let fnc = (**$r).$f.unwrap();
+            rc = fnc($r, $($arg)*);
         }
         if rc != ::jvmti::jvmtiError::JVMTI_ERROR_NONE {
-            eprintln!("ERROR: CreateRawMonitor failed: {:?}", rc);
-            return Err(::jvmti::JNI_ERR);
+            eprintln!("ERROR: JVMTI {} failed: {:?}", stringify!($f), rc);
+            panic!(::jvmti::JNI_ERR);
         }
+    } }
+);
+
+// Pick a suitable object tag mask greater than tags used to tag classes.
+const TAG_VISITED_MASK: ::jvmti::jlong = 1 << 31;
+
+impl JvmTI for JvmTiEnv {
+    fn create_raw_monitor(&mut self, name: String, monitor: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint> {
+        jvmtifn!(self.jvmti, CreateRawMonitor, CString::new(name).unwrap().into_raw(), monitor.lock().unwrap().id);
         Ok(())
     }
 
     fn raw_monitor_enter(&mut self, monitor: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint> {
-        let rc;
-        unsafe {
-            let raw_monitor_enter_fn = (**self.jvmti).RawMonitorEnter.unwrap();
-            rc = raw_monitor_enter_fn(self.jvmti, *monitor.lock().unwrap().id);
-        }
-        if rc != ::jvmti::jvmtiError::JVMTI_ERROR_NONE {
-            eprintln!("ERROR: RawMonitorEnter failed: {:?}", rc);
-            return Err(::jvmti::JNI_ERR);
-        }
+        jvmtifn!(self.jvmti, RawMonitorEnter, *monitor.lock().unwrap().id);
         Ok(())
     }
 
     fn raw_monitor_exit(&mut self, monitor: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint> {
-        let rc;
-        unsafe {
-            let raw_monitor_exit_fn = (**self.jvmti).RawMonitorExit.unwrap();
-            rc = raw_monitor_exit_fn(self.jvmti, *monitor.lock().unwrap().id);
-        }
-        if rc != ::jvmti::jvmtiError::JVMTI_ERROR_NONE {
-            eprintln!("ERROR: RawMonitorExit failed: {:?}", rc);
-            return Err(::jvmti::JNI_ERR);
-        }
+        jvmtifn!(self.jvmti, RawMonitorExit, *monitor.lock().unwrap().id);
         Ok(())
     }
 
@@ -111,64 +114,124 @@ impl JvmTI for JvmTiEnv {
             EVENT_CALLBACKS.resource_exhausted = Some(callback);
         }
 
-        let rc;
-        unsafe {
-            let set_event_callbacks_fn = (**self.jvmti).SetEventCallbacks.unwrap();
-            let callbacks = ::jvmti::jvmtiEventCallbacks {
-                VMInit: None,
-                VMDeath: None,
-                ThreadStart: None,
-                ThreadEnd: None,
-                ClassFileLoadHook: None,
-                ClassLoad: None,
-                ClassPrepare: None,
-                VMStart: None,
-                Exception: None,
-                ExceptionCatch: None,
-                SingleStep: None,
-                FramePop: None,
-                Breakpoint: None,
-                FieldAccess: None,
-                FieldModification: None,
-                MethodEntry: None,
-                MethodExit: None,
-                NativeMethodBind: None,
-                CompiledMethodLoad: None,
-                CompiledMethodUnload: None,
-                DynamicCodeGenerated: None,
-                DataDumpRequest: None,
-                reserved72: None,
-                MonitorWait: None,
-                MonitorWaited: None,
-                MonitorContendedEnter: None,
-                MonitorContendedEntered: None,
-                reserved77: None,
-                reserved78: None,
-                reserved79: None,
-                ResourceExhausted: Some(resource_exhausted),
-                GarbageCollectionStart: None,
-                GarbageCollectionFinish: None,
-                ObjectFree: None,
-                VMObjectAlloc: None
-            };
-            rc = set_event_callbacks_fn(self.jvmti, &callbacks, size_of::<::jvmti::jvmtiEventCallbacks>() as i32);
-        }
-        if rc != ::jvmti::jvmtiError::JVMTI_ERROR_NONE {
-            eprintln!("ERROR: SetEventCallbacks failed: {:?}", rc);
-            return Err(::jvmti::JNI_ERR);
-        }
+        let callbacks = ::jvmti::jvmtiEventCallbacks {
+            VMInit: None,
+            VMDeath: None,
+            ThreadStart: None,
+            ThreadEnd: None,
+            ClassFileLoadHook: None,
+            ClassLoad: None,
+            ClassPrepare: None,
+            VMStart: None,
+            Exception: None,
+            ExceptionCatch: None,
+            SingleStep: None,
+            FramePop: None,
+            Breakpoint: None,
+            FieldAccess: None,
+            FieldModification: None,
+            MethodEntry: None,
+            MethodExit: None,
+            NativeMethodBind: None,
+            CompiledMethodLoad: None,
+            CompiledMethodUnload: None,
+            DynamicCodeGenerated: None,
+            DataDumpRequest: None,
+            reserved72: None,
+            MonitorWait: None,
+            MonitorWaited: None,
+            MonitorContendedEnter: None,
+            MonitorContendedEntered: None,
+            reserved77: None,
+            reserved78: None,
+            reserved79: None,
+            ResourceExhausted: Some(resource_exhausted),
+            GarbageCollectionStart: None,
+            GarbageCollectionFinish: None,
+            ObjectFree: None,
+            VMObjectAlloc: None
+        };
+        jvmtifn!(self.jvmti, SetEventCallbacks, &callbacks, size_of::<::jvmti::jvmtiEventCallbacks>() as i32);
 
-        let rc;
-        unsafe {
-            let set_event_notification_mode_fn = (**self.jvmti).SetEventNotificationMode.unwrap();
-            rc = set_event_notification_mode_fn(self.jvmti, ::jvmti::jvmtiEventMode::JVMTI_ENABLE, ::jvmti::jvmtiEvent::JVMTI_EVENT_RESOURCE_EXHAUSTED, ::std::ptr::null_mut());
-        }
-        if rc != ::jvmti::jvmtiError::JVMTI_ERROR_NONE {
-            eprintln!("ERROR: SetEventNotificationMode failed: {:?}", rc);
-            return Err(::jvmti::JNI_ERR);
-        }
+        jvmtifn!(self.jvmti, SetEventNotificationMode, ::jvmti::jvmtiEventMode::JVMTI_ENABLE, ::jvmti::jvmtiEvent::JVMTI_EVENT_RESOURCE_EXHAUSTED, ::std::ptr::null_mut());
 
         Ok(())
+    }
+
+    fn enable_object_tagging(&mut self) -> Result<(), ::jvmti::jint> {
+        let mut capabilities = ::jvmti::jvmtiCapabilities {
+            _bitfield_1: [0; 4],
+            _bitfield_2: [0; 2],
+            _bitfield_3: [0; 2],
+            _bitfield_4: [0; 2],
+            __bindgen_align: [],
+            // FIXME: seems dangeous to reference a field with this name. Same may be true of other fields in this struct.
+        };
+
+        jvmtifn!(self.jvmti, GetCapabilities, &mut capabilities);
+
+        capabilities.set_can_tag_objects(1);
+
+        jvmtifn!(self.jvmti, AddCapabilities, &capabilities);
+
+        Ok(())
+    }
+
+    fn tag_loaded_classes(&self, tagger: &mut Tag) {
+        let mut class_count = 0;
+        let mut class_ptr = ::std::ptr::null_mut();
+        jvmtifn!(self.jvmti, GetLoadedClasses, &mut class_count, &mut class_ptr);
+
+        while class_count > 0 {
+            let mut sig_ptr = ::std::ptr::null_mut();
+            jvmtifn!(self.jvmti, GetClassSignature, *class_ptr, &mut sig_ptr, ::std::ptr::null_mut());
+            unsafe {
+                let cstr = CStr::from_ptr(sig_ptr); // sig_ptr is deallocated later
+                let tag = tagger.class_tag(&cstr.to_str().unwrap().to_string());
+                jvmtifn!(self.jvmti, SetTag, *class_ptr, tag);
+            }
+            jvmtifn!(self.jvmti, Deallocate, sig_ptr as *mut u8);
+
+            class_count -= 1;
+            unsafe { class_ptr = class_ptr.offset(1); }
+        }
+    }
+
+    fn traverse_live_heap<F>(&self, mut closure: F)
+        where F: FnMut(::jvmti::jlong, ::jvmti::jlong) {
+        let callbacks = ::jvmti::jvmtiHeapCallbacks {
+            heap_iteration_callback: None,
+            heap_reference_callback: Some(heapReferenceCallback),
+            primitive_field_callback: None,
+            array_primitive_value_callback: None,
+            string_primitive_value_callback: None,
+            reserved5: None,
+            reserved6: None,
+            reserved7: None,
+            reserved8: None,
+            reserved9: None,
+            reserved10: None,
+            reserved11: None,
+            reserved12: None,
+            reserved13: None,
+            reserved14: None,
+            reserved15: None,
+        };
+        // Pass closure to the callback as a thin pointer pointing to a fat pointer pointing to the closure.
+        // See: https://stackoverflow.com/questions/38995701/how-do-i-pass-closures-through-raw-pointers-as-arguments-to-c-functions
+        let mut closure_ptr: &mut FnMut(::jvmti::jlong, ::jvmti::jlong) = &mut closure;
+        let closure_ptr_ptr = unsafe { transmute(&mut closure_ptr) };
+
+        // Need to pass the traversal state into FollowReferences and pick it up in the callback, which may be called multiple times
+        jvmtifn!(self.jvmti, FollowReferences, 0, ::std::ptr::null_mut(), ::std::ptr::null_mut(), &callbacks, closure_ptr_ptr);
+        //        jvmtiHeapCallbacks callbacks = {};
+        //        callbacks.heap_reference_callback = &heapRefCallback;
+        //
+        //        jvmtiError err = jvmti -> FollowReferences(0, NULL, NULL, &callbacks, this);
+        //        if (err != JVMTI_ERROR_NONE) {
+        //            std::cerr << "ERROR: FollowReferences failed: " << err << std::endl;
+        //            throw new std::runtime_error("FollowReferences failed");
+        //        }
     }
 }
 
@@ -198,13 +261,41 @@ pub static mut EVENT_CALLBACKS: EventCallbacks = EventCallbacks {
     resource_exhausted: None
 };
 
+#[allow(unused_variables)]
+unsafe extern "C" fn heapReferenceCallback(reference_kind: ::jvmti::jvmtiHeapReferenceKind,
+                                           reference_info: *const ::jvmti::jvmtiHeapReferenceInfo,
+                                           class_tag: ::jvmti::jlong,
+                                           referrer_class_tag: ::jvmti::jlong,
+                                           size: ::jvmti::jlong,
+                                           tag_ptr: *mut ::jvmti::jlong,
+                                           referrer_tag_ptr: *mut ::jvmti::jlong,
+                                           length: ::jvmti::jint,
+                                           user_data: *mut ::std::os::raw::c_void)
+                                           -> ::jvmti::jint {
+    if *tag_ptr & TAG_VISITED_MASK == TAG_VISITED_MASK {
+        return 0;
+    }
+
+    // For each object encountered, tag it so we can avoid visiting it again
+    // noting that traverse_live_heap is called at most once in the lifetime of a JVM
+    *tag_ptr |= TAG_VISITED_MASK;
+
+    // Add the object to the heap stats along with its class signature.
+    let unmaskedClassTag = class_tag & !TAG_VISITED_MASK;
+    let closure: &mut &mut FnMut(::jvmti::jlong, ::jvmti::jlong) -> ::jvmti::jint = transmute(user_data);
+    closure(unmaskedClassTag, size);
+
+    ::jvmti::JVMTI_VISIT_OBJECTS as ::jvmti::jint
+}
+
 #[derive(Clone, Copy)]
 pub struct JniEnv {
+    #[allow(dead_code)] // TODO: revisit this once port is complete
     jni: *mut ::jvmti::JNIEnv
 }
 
 impl JniEnv {
     pub fn new(jni_env: *mut ::jvmti::JNIEnv) -> JniEnv {
-           JniEnv {jni: jni_env}
+        JniEnv { jni: jni_env }
     }
 }

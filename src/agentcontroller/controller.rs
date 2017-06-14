@@ -15,6 +15,7 @@
  */
 
 pub struct AgentController<'a> {
+    #[allow(dead_code)] // TODO: revisit this once port is complete
     jvmti: ::env::JvmTiEnv,
     heuristic: Box<super::Heuristic + 'a>,
     actions: Vec<Box<super::Action>>
@@ -126,9 +127,9 @@ mod tests {
         ac.on_oom(dummy_jni_env(), 0);
     }
 
-    unsafe extern "C" fn test_get_env(vm: *mut ::jvmti::JavaVM,
-                                      penv: *mut *mut ::std::os::raw::c_void,
-                                      version: ::jvmti::jint)
+    unsafe extern "C" fn test_get_env(_: *mut ::jvmti::JavaVM,
+                                      _: *mut *mut ::std::os::raw::c_void,
+                                      _: ::jvmti::jint)
                                       -> ::jvmti::jint {
         0
     }

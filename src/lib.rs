@@ -23,6 +23,7 @@ use std::sync::Mutex;
 #[macro_use]
 mod macros;
 mod env;
+mod heap;
 mod jvmti;
 mod agentcontroller;
 
