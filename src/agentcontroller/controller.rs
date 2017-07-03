@@ -35,6 +35,10 @@ impl<'a> AgentController<'a> {
             ac.actions.push(Box::new(super::heaphistogram::HeapHistogram::new(ti, parms.heap_histogram_max_entries)?));
         }
 
+        if parms.print_memory_usage {
+            ac.actions.push(Box::new(super::poolstats::PoolStats::new()));
+        }
+
         ac.actions.push(Box::new(super::kill::Kill::new()));
 
         Ok(ac)

@@ -127,19 +127,19 @@ mod tests {
     }
 
     impl JvmTI for MockJvmti {
-        fn create_raw_monitor(&mut self, name: String, monitor: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint> {
+        fn create_raw_monitor(&mut self, _: String, _: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint> {
             unimplemented!()
         }
 
-        fn raw_monitor_enter(&mut self, monitor: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint> {
+        fn raw_monitor_enter(&mut self, _: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint> {
             unimplemented!()
         }
 
-        fn raw_monitor_exit(&mut self, monitor: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint> {
+        fn raw_monitor_exit(&mut self, _: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint> {
             unimplemented!()
         }
 
-        fn on_resource_exhausted(&mut self, callback: FnResourceExhausted) -> Result<(), ::jvmti::jint> {
+        fn on_resource_exhausted(&mut self, _: FnResourceExhausted) -> Result<(), ::jvmti::jint> {
             unimplemented!()
         }
 

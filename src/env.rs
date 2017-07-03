@@ -224,14 +224,6 @@ impl JvmTI for JvmTiEnv {
 
         // Need to pass the traversal state into FollowReferences and pick it up in the callback, which may be called multiple times
         jvmtifn!(self.jvmti, FollowReferences, 0, ::std::ptr::null_mut(), ::std::ptr::null_mut(), &callbacks, closure_ptr_ptr);
-        //        jvmtiHeapCallbacks callbacks = {};
-        //        callbacks.heap_reference_callback = &heapRefCallback;
-        //
-        //        jvmtiError err = jvmti -> FollowReferences(0, NULL, NULL, &callbacks, this);
-        //        if (err != JVMTI_ERROR_NONE) {
-        //            std::cerr << "ERROR: FollowReferences failed: " << err << std::endl;
-        //            throw new std::runtime_error("FollowReferences failed");
-        //        }
     }
 }
 
@@ -290,12 +282,139 @@ unsafe extern "C" fn heapReferenceCallback(reference_kind: ::jvmti::jvmtiHeapRef
 
 #[derive(Clone, Copy)]
 pub struct JniEnv {
-    #[allow(dead_code)] // TODO: revisit this once port is complete
     jni: *mut ::jvmti::JNIEnv
 }
 
 impl JniEnv {
     pub fn new(jni_env: *mut ::jvmti::JNIEnv) -> JniEnv {
         JniEnv { jni: jni_env }
+    }
+
+    pub fn call_int_method(&mut self, object: ::jvmti::jobject, method_id: ::jvmti::jmethodID) -> ::jvmti::jint {
+        unsafe {
+            (**self.jni).CallIntMethod.unwrap()(self.jni, object, method_id)
+        }
+    }
+
+    pub fn call_long_method(&mut self, object: ::jvmti::jobject, method_id: ::jvmti::jmethodID) -> ::jvmti::jlong {
+        unsafe {
+            (**self.jni).CallLongMethod.unwrap()(self.jni, object, method_id)
+        }
+    }
+
+    pub fn call_object_method(&mut self, object: ::jvmti::jobject, method_id: ::jvmti::jmethodID) -> Option<::jvmti::jobject> {
+        let result;
+        unsafe {
+            result = (**self.jni).CallObjectMethod.unwrap()(self.jni, object, method_id);
+        }
+
+        if result == ptr::null_mut() {
+            eprintln!("ERROR: call to method_id {:?} on object {:?} failed", method_id, object);
+            None
+        } else {
+            Some(result)
+        }
+    }
+
+    // Rust doesn't have variadic functions (except for unsafe FFI bindings).
+    pub fn call_object_method_with_int(&mut self, object: ::jvmti::jobject, method_id: ::jvmti::jmethodID, n: ::jvmti::jint) -> Option<::jvmti::jobject> {
+        let result;
+        unsafe {
+            result = (**self.jni).CallObjectMethod.unwrap()(self.jni, object, method_id, n);
+        }
+
+        if result == ptr::null_mut() {
+            eprintln!("ERROR: call to method_id {:?} on object {:?} with variable argument {} failed", method_id, object, n);
+            None
+        } else {
+            Some(result)
+        }
+    }
+
+    pub fn call_static_object_method(&mut self, class: ::jvmti::jclass, method_id: ::jvmti::jmethodID) -> Option<::jvmti::jobject> {
+        let object;
+        unsafe {
+            object = (**self.jni).CallStaticObjectMethod.unwrap()(self.jni, class, method_id);
+        }
+
+        if object == ptr::null_mut() {
+            eprintln!("ERROR: call to method_id {:?} on class {:?} failed", method_id, class);
+            None
+        } else {
+            Some(object)
+        }
+    }
+
+    pub fn find_class(&mut self, class_name: &str) -> Option<::jvmti::jclass> {
+        let class;
+        unsafe {
+            class = (**self.jni).FindClass.unwrap()(self.jni, CString::new(class_name).unwrap().as_ptr())
+        }
+
+        if class == ptr::null_mut() {
+            eprintln!("ERROR: {} class not found", class_name);
+            None
+        } else {
+            Some(class)
+        }
+    }
+
+    pub fn get_method_id(&mut self, class: ::jvmti::jclass, method: &str, signature: &str) -> Option<::jvmti::jmethodID> {
+        let method_id;
+        unsafe {
+            method_id = (**self.jni).GetMethodID.unwrap()(self.jni, class, CString::new(method).unwrap().as_ptr(), CString::new(signature).unwrap().as_ptr());
+        }
+
+        if method_id == ptr::null_mut() {
+            eprintln!("ERROR: {} method with signature {} not found", method, signature);
+            None
+        } else {
+            Some(method_id)
+        }
+    }
+
+    pub fn get_object_class(&mut self, object: ::jvmti::jobject) -> Option<::jvmti::jclass> {
+        let class;
+        unsafe {
+            class = (**self.jni).GetObjectClass.unwrap()(self.jni, object)
+        }
+
+        if class == ptr::null_mut() {
+            eprintln!("ERROR: class for object {:?} not found", object);
+            None
+        } else {
+            Some(class)
+        }
+    }
+
+    pub fn get_static_method_id(&mut self, class: ::jvmti::jclass, method: &str, signature: &str) -> Option<::jvmti::jmethodID> {
+        let method_id;
+        unsafe {
+            method_id = (**self.jni).GetStaticMethodID.unwrap()(self.jni, class, CString::new(method).unwrap().as_ptr(), CString::new(signature).unwrap().as_ptr());
+        }
+
+        if method_id == ptr::null_mut() {
+            eprintln!("ERROR: {} static method with signature {} not found", method, signature);
+            None
+        } else {
+            Some(method_id)
+        }
+    }
+
+    pub fn get_string_utf_chars<'a>(&mut self, s: ::jvmti::jstring) -> (*const ::std::os::raw::c_char, &'a CStr) {
+        let utf_chars;
+        let cstr;
+        unsafe {
+            utf_chars = (**self.jni).GetStringUTFChars.unwrap()(self.jni, s, ptr::null_mut());
+            cstr = CStr::from_ptr(utf_chars);
+        }
+
+        (utf_chars, cstr)
+    }
+
+    pub fn release_string_utf_chars(&mut self, s: ::jvmti::jstring, utf_chars: *const ::std::os::raw::c_char) {
+        unsafe {
+            (**self.jni).ReleaseStringUTFChars.unwrap()(self.jni, s, utf_chars);
+        }
     }
 }

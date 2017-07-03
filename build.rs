@@ -20,10 +20,6 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    // Tell cargo to tell rustc to link the system bzip2
-    // shared library.
-    //println!("cargo:rustc-link-lib=bz2");
-
     let java_include_directory = PathBuf::from(env::var("JAVA_HOME").unwrap()).join("include");
 
     let java_platform_include_directory = if cfg!(target_os = "macos") {

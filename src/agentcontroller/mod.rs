@@ -25,6 +25,7 @@ mod heaphistogram;
 mod kill;
 mod threshold;
 mod parms;
+mod poolstats;
 
 trait Heuristic {
     fn on_oom(&mut self) -> bool;
