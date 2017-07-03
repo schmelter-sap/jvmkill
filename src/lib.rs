@@ -83,15 +83,17 @@ pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw:
 }
 
 fn resource_exhausted(mut jvmti_env: env::JvmTiEnv, jni_env: env::JniEnv, flags: ::jvmti::jint) {
-    if let Err(err) = jvmti_env.raw_monitor_enter(&RAW_MONITOR_ID) {
-        eprintln!("ERROR: RawMonitorEnter failed: {}", err);
-        return;
-    }
+    STATIC_CONTEXT.lock().map(|mut a| {
+        if let Err(err) = jvmti_env.raw_monitor_enter(&RAW_MONITOR_ID) {
+            eprintln!("ERROR: RawMonitorEnter failed: {}", err);
+            return;
+        }
 
-    STATIC_CONTEXT.lock().map(|mut a| a.on_oom(jni_env, flags)).unwrap();
+        a.on_oom(jni_env, flags);
 
-    if let Err(err) = jvmti_env.raw_monitor_exit(&RAW_MONITOR_ID) {
-        eprintln!("ERROR: RawMonitorExit failed: {}", err);
-        return;
-    }
+        if let Err(err) = jvmti_env.raw_monitor_exit(&RAW_MONITOR_ID) {
+            eprintln!("ERROR: RawMonitorExit failed: {}", err);
+            return;
+        }
+    }).unwrap();
 }
