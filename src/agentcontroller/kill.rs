@@ -38,7 +38,7 @@ impl Kill {
 
 impl super::Action for Kill {
     fn on_oom(&self, _: ::env::JniEnv, _: ::jvmti::jint) {
-        eprintln!("jvmkill killing current process");
+        eprintln!("\njvmkill killing current process");
         unsafe {
             kill(getpid(), self.signal);
         }
