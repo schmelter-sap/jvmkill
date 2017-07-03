@@ -33,13 +33,15 @@ struct ObjectStats {
 }
 
 pub struct Stats {
-    java_objects: HashMap<String, ObjectStats>
+    java_objects: HashMap<String, ObjectStats>,
+    max_entries: usize
 }
 
 impl Stats {
-    pub fn new() -> Stats {
+    pub fn new(max_entries: usize) -> Stats {
         Stats {
             java_objects: HashMap::new(),
+            max_entries: max_entries,
         }
     }
 }
@@ -49,7 +51,7 @@ impl Print for Stats {
         let mut results: Vec<(&String, &ObjectStats)> = self.java_objects.iter().collect();
         results.sort_by(|&(_, s1), &(_, s2)| s2.total_size.cmp(&s1.total_size));
 
-        //        results.truncate(20); // TODO: parameterise
+        results.truncate(self.max_entries);
 
         let max_sig_len = results.iter()
             .map(|&(sig, _)| sig.len())
@@ -79,7 +81,7 @@ mod tests {
 
     #[test]
     fn short_signature() {
-        let mut s = Stats::new();
+        let mut s = Stats::new(100);
         s.recordObject(String::from("aaa"), 20);
         assert_print(&s, "\
             | Instance Count | Total Bytes | Class Name |\n\
@@ -88,7 +90,7 @@ mod tests {
 
     #[test]
     fn long_signature() {
-        let mut s = Stats::new();
+        let mut s = Stats::new(100);
         s.recordObject(String::from("abcdefghijklmn"), 20);
         assert_print(&s, "\
             | Instance Count | Total Bytes | Class Name     |\n\
@@ -97,7 +99,7 @@ mod tests {
 
     #[test]
     fn counting() {
-        let mut s = Stats::new();
+        let mut s = Stats::new(100);
         s.recordObject(String::from("a"), 20);
         s.recordObject(String::from("a"), 15);
         assert_print(&s, "\
@@ -107,7 +109,7 @@ mod tests {
 
     #[test]
     fn sorting() {
-        let mut s = Stats::new();
+        let mut s = Stats::new(100);
         s.recordObject(String::from("b"), 20);
         s.recordObject(String::from("a"), 30);
         s.recordObject(String::from("c"), 10);
@@ -116,6 +118,18 @@ mod tests {
             | 1              | 30          | a          |\n\
             | 1              | 20          | b          |\n\
             | 1              | 10          | c          |\n");
+    }
+
+    #[test]
+    fn truncation() {
+        let mut s = Stats::new(2);
+        s.recordObject(String::from("b"), 20);
+        s.recordObject(String::from("a"), 30);
+        s.recordObject(String::from("c"), 10);
+        assert_print(&s, "\
+            | Instance Count | Total Bytes | Class Name |\n\
+            | 1              | 30          | a          |\n\
+            | 1              | 20          | b          |\n");
     }
 
     fn assert_print(s: &Stats, expected: &str) {

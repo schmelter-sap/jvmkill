@@ -25,13 +25,15 @@ use heap::stats::Print;
 
 pub struct HeapHistogram<T: JvmTI + Clone> {
     jvmti: T,
+    max_entries: usize
 }
 
 impl<T: JvmTI + Clone> HeapHistogram<T> {
-    pub fn new(mut jvmti: T) -> Result<Self, ::jvmti::jint> {
+    pub fn new(mut jvmti: T, max_entries: usize) -> Result<Self, ::jvmti::jint> {
         jvmti.enable_object_tagging()?;
         Ok(Self {
             jvmti: jvmti.clone(),
+            max_entries: max_entries
         })
     }
 
@@ -41,7 +43,7 @@ impl<T: JvmTI + Clone> HeapHistogram<T> {
         // Tag all loaded classes so we can determine each object's class signature during heap traversal.
         self.jvmti.tag_loaded_classes(&mut tagger);
 
-        let mut heap_stats = Stats::new();
+        let mut heap_stats = Stats::new(self.max_entries);
 
         // Traverse the live heap and add objects to the heap stats.
         self.jvmti.traverse_live_heap(|class_tag: ::jvmti::jlong, size: ::jvmti::jlong| {
@@ -75,7 +77,7 @@ mod tests {
     #[test]
     fn new_calls_enable_object_tagging() {
         let mockJvmti = MockJvmti::new();
-        let hh = HeapHistogram::new(mockJvmti);
+        let hh = HeapHistogram::new(mockJvmti, 100);
         assert!(hh.is_ok());
         assert!((hh.unwrap().jvmti as MockJvmti).object_tagging_enabled);
     }
@@ -84,7 +86,7 @@ mod tests {
     fn new_percolates_enable_object_tagging_failure() {
         let mut mockJvmti = MockJvmti::new();
         mockJvmti.object_tagging_enabled_result = Err(test_error_code);
-        let hh = HeapHistogram::new(mockJvmti);
+        let hh = HeapHistogram::new(mockJvmti, 100);
         assert!(hh.is_err());
         assert_eq!(hh.err().unwrap(), test_error_code);
     }
@@ -92,7 +94,7 @@ mod tests {
     #[test]
     fn print_works() {
         let mockJvmti = MockJvmti::new();
-        let hh = HeapHistogram::new(mockJvmti);
+        let hh = HeapHistogram::new(mockJvmti, 100);
 
         let mut buff: Vec<u8> = Vec::new();
         hh.unwrap().print(&mut buff);
