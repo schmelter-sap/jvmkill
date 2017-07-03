@@ -57,10 +57,10 @@ impl Print for Stats {
             .map(|&(sig, _)| sig.len())
             .fold(10, |max_len, len| max(max_len, len));
 
-        writeln!(writer, "| Instance Count | Total Bytes | Class Name{} |", " ".repeat(max_sig_len - 10)).unwrap();
-
+        writeln_paced!(writer, "| Instance Count | Total Bytes | Class Name{} |", " ".repeat(max_sig_len - 10));
+        
         for &(sig, s) in results.iter() {
-            writeln!(writer, "| {:<14} | {:<11} | {}{} |", s.count, s.total_size, sig, " ".repeat(max_sig_len - sig.len())).unwrap();
+            writeln_paced!(writer, "| {:<14} | {:<11} | {}{} |", s.count, s.total_size, sig, " ".repeat(max_sig_len - sig.len()));
         }
     }
 }

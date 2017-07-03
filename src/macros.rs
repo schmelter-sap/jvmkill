@@ -21,3 +21,15 @@ macro_rules! eprintln (
         writeln!(&mut ::std::io::stderr(), $($arg)*).unwrap();
     } }
 );
+
+// writeln_paced is similar to writeln except it reduces the risk of loggregator missing some entries
+// by sleeping before each write. Also, it panics if the underlying writeln fails.
+macro_rules! writeln_paced (
+    ($($arg:tt)*) => { {
+        use std::{thread, time};
+
+        thread::sleep(time::Duration::from_millis(1));
+
+        writeln!($($arg)*).unwrap();
+    } }
+);
