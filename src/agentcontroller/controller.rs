@@ -24,13 +24,20 @@ pub struct AgentController<'a> {
 impl<'a> AgentController<'a> {
     pub fn new(ti: ::env::JvmTiEnv, options: *mut ::std::os::raw::c_char) -> Result<Self, ::jvmti::jint> {
         let parms = super::parms::AgentParameters::parseParameters(options);
-        super::heaphistogram::HeapHistogram::new(ti, parms.heap_histogram_max_entries).map(|action| {
-            Self {
-                jvmti: ti,
-                heuristic: Box::new(super::threshold::Threshold::new(parms.count_threshold, parms.time_threshold)),
-                actions: vec![Box::new(action), Box::new(super::kill::Kill::new())],
-            }
-        })
+
+        let mut ac = Self {
+            jvmti: ti,
+            heuristic: Box::new(super::threshold::Threshold::new(parms.count_threshold, parms.time_threshold)),
+            actions: Vec::new(),
+        };
+
+        if parms.print_heap_histogram {
+            ac.actions.push(Box::new(super::heaphistogram::HeapHistogram::new(ti, parms.heap_histogram_max_entries)?));
+        }
+
+        ac.actions.push(Box::new(super::kill::Kill::new()));
+
+        Ok(ac)
     }
 
     #[cfg(test)]
