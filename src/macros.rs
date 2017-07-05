@@ -27,6 +27,8 @@ macro_rules! eprintln (
 macro_rules! writeln_paced (
     ($($arg:tt)*) => { {
         use std::{thread, time};
+        #[allow(unused_imports)]
+        use std::io::Write;
 
         thread::sleep(time::Duration::from_millis(1));
 

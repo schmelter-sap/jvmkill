@@ -14,16 +14,19 @@
  * limitations under the License.
  */
 
+use std::path::PathBuf;
+
 /**
  * Struct that holds agent configuration
  */
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug)]
 pub struct AgentParameters {
     pub time_threshold: usize,
     pub count_threshold: usize,
     pub print_heap_histogram: bool,
     pub heap_histogram_max_entries: usize,
-    pub print_memory_usage: bool
+    pub print_memory_usage: bool,
+    pub heap_dump_path: Option<PathBuf>
 }
 
 impl AgentParameters {
@@ -35,6 +38,7 @@ impl AgentParameters {
         let mut print_heap_histogram: usize = 0;
         let mut heap_histogram_max_entries: usize = 100;
         let mut print_memory_usage: usize = 1;
+        let mut heap_dump_path: Option<PathBuf> = None;
 
         let cslice;
         unsafe {
@@ -56,6 +60,7 @@ impl AgentParameters {
                 "printHeapHistogram" => if !value.is_empty() { print_heap_histogram = value.parse().expect("not a number") },
                 "heapHistogramMaxEntries" => if !value.is_empty() { heap_histogram_max_entries = value.parse().expect("not a number") },
                 "printMemoryUsage" => if !value.is_empty() { print_memory_usage = value.parse().expect("not a number") },
+                "heapDumpPath" => heap_dump_path = Some(PathBuf::from(value)),
                 _ => assert!(false, "unknown option: {}", key),
             }
         }
@@ -66,12 +71,15 @@ impl AgentParameters {
             print_heap_histogram: print_heap_histogram != 0,
             heap_histogram_max_entries: heap_histogram_max_entries,
             print_memory_usage: print_memory_usage != 0,
+            heap_dump_path: heap_dump_path
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     #[test]
     fn defaults() {
         let ap = parse("");
@@ -193,6 +201,24 @@ mod tests {
     fn parses_print_memory_usage_invalid() {
         let ap = parse("printMemoryUsage=false");
         assert!(ap.print_memory_usage);
+    }
+
+    #[test]
+    fn parses_heap_dump_path_default() {
+        let ap = parse("");
+        assert_eq!(ap.heap_dump_path, None);
+    }
+
+    #[test]
+    fn parses_heap_dump_path_empty() {
+        let ap = parse("heapDumpPath=");
+        assert_eq!(ap.heap_dump_path, Some(PathBuf::from("")));
+    }
+
+    #[test]
+    fn parses_heap_dump_path_provided() {
+        let ap = parse("heapDumpPath=/a/b");
+        assert_eq!(ap.heap_dump_path, Some(PathBuf::from("/a/b")));
     }
 
     #[test]

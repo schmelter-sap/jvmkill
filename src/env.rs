@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
+use std::io::Write;
 use std::mem::size_of;
 use std::mem::transmute;
+use std::os::raw::c_uint;
 use ::std::ptr;
 use ::std::ffi::CString;
 use ::std::ffi::CStr;
@@ -331,6 +333,22 @@ impl JniEnv {
         }
     }
 
+    // Rust doesn't have variadic functions (except for unsafe FFI bindings).
+    pub fn call_object_method_with_cstring_jboolean(&mut self, object: ::jvmti::jobject, method_id: ::jvmti::jmethodID, s: CString, b: ::jvmti::jboolean) -> Option<::jvmti::jobject> {
+        let result;
+        unsafe {
+            let s_jstring = (**self.jni).NewStringUTF.unwrap()(self.jni, s.as_ptr());
+            result = (**self.jni).CallObjectMethod.unwrap()(self.jni, object, method_id, s_jstring, b as c_uint);
+        }
+
+        if result == ptr::null_mut() {
+            eprintln!("ERROR: call to method_id {:?} on object {:?} with variable arguments {:?}, {} failed", method_id, object, s, b);
+            None
+        } else {
+            Some(result)
+        }
+    }
+
     pub fn call_static_object_method(&mut self, class: ::jvmti::jclass, method_id: ::jvmti::jmethodID) -> Option<::jvmti::jobject> {
         let object;
         unsafe {
@@ -343,6 +361,37 @@ impl JniEnv {
         } else {
             Some(object)
         }
+    }
+
+    pub fn call_static_object_method_with_jclass(&mut self, class: ::jvmti::jclass, method_id: ::jvmti::jmethodID, c: ::jvmti::jclass) -> Option<::jvmti::jobject> {
+        let object;
+        unsafe {
+            object = (**self.jni).CallStaticObjectMethod.unwrap()(self.jni, class, method_id, c);
+        }
+
+        if object == ptr::null_mut() {
+            eprintln!("ERROR: call to method_id {:?} on class {:?} with variable argument {:?} failed", method_id, class, c);
+            None
+        } else {
+            Some(object)
+        }
+    }
+
+    pub fn diagnose_exception(&mut self, stream: &mut Write, message: &str) {
+        let exc;
+        unsafe {
+            if (**self.jni).ExceptionCheck.unwrap()(self.jni) != ::jvmti::JNI_TRUE as u8 {
+                return;
+            }
+            exc = (**self.jni).ExceptionOccurred.unwrap()(self.jni);
+        }
+        let exc_class = self.get_object_class(exc).unwrap();
+        let get_message_method_id = self.get_method_id(exc_class,"getMessage", "()Ljava/lang/String;").unwrap();
+        let exc_message = self.call_object_method(exc, get_message_method_id).unwrap() as ::jvmti::jstring;
+
+        let (exc_message_utf_chars, exc_message_cstr) = self.get_string_utf_chars(exc_message);
+        writeln!(stream, "{}{}", message, exc_message_cstr.to_string_lossy().into_owned()).unwrap();
+        self.release_string_utf_chars(exc_message, exc_message_utf_chars);
     }
 
     pub fn find_class(&mut self, class_name: &str) -> Option<::jvmti::jclass> {

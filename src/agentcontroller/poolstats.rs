@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-use std::io::Write;
-
 pub struct PoolStats {}
 
 impl PoolStats {

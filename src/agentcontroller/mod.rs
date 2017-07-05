@@ -21,6 +21,7 @@ pub trait MutAction {
     fn on_oom(&mut self, jni_env: ::env::JniEnv, resource_exhaustion_flags: ::jvmti::jint);
 }
 
+mod heapdump;
 mod heaphistogram;
 mod kill;
 mod threshold;
