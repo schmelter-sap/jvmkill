@@ -21,16 +21,11 @@ use std::os::raw::c_uint;
 use ::std::ptr;
 use ::std::ffi::CString;
 use ::std::ffi::CStr;
-use ::std::sync::Mutex;
 use ::jvmti::jvmtiEnv;
-use ::jvmti::jrawMonitorID;
 use ::heap::tagger::Tag;
 
 pub trait JvmTI {
     // TODO: rework the following methods not to return values since they only ever return Ok(()) or panic.
-    fn create_raw_monitor(&mut self, name: String, monitor: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint>;
-    fn raw_monitor_enter(&mut self, monitor: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint>;
-    fn raw_monitor_exit(&mut self, monitor: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint>;
     fn on_resource_exhausted(&mut self, callback: FnResourceExhausted) -> Result<(), ::jvmti::jint>;
     fn enable_object_tagging(&mut self) -> Result<(), ::jvmti::jint>;
     fn tag_loaded_classes(&self, tagger: &mut Tag);
@@ -38,20 +33,6 @@ pub trait JvmTI {
     // Restriction: traverse_live_heap may be called at most once in the lifetime of a JVM.
     fn traverse_live_heap<F>(&self, closure: F) where F: FnMut(::jvmti::jlong, ::jvmti::jlong);
 }
-
-pub struct RawMonitorId {
-    id: *mut jrawMonitorID,
-}
-
-impl RawMonitorId {
-    pub fn new() -> RawMonitorId {
-        RawMonitorId {
-            id: Box::into_raw(Box::new(ptr::null_mut())),
-        }
-    }
-}
-
-unsafe impl Send for RawMonitorId {}
 
 #[derive(Clone, Copy)]
 pub struct JvmTiEnv {
@@ -96,21 +77,6 @@ macro_rules! jvmtifn (
 const TAG_VISITED_MASK: ::jvmti::jlong = 1 << 31;
 
 impl JvmTI for JvmTiEnv {
-    fn create_raw_monitor(&mut self, name: String, monitor: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint> {
-        jvmtifn!(self.jvmti, CreateRawMonitor, CString::new(name).unwrap().into_raw(), monitor.lock().unwrap().id);
-        Ok(())
-    }
-
-    fn raw_monitor_enter(&mut self, monitor: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint> {
-        jvmtifn!(self.jvmti, RawMonitorEnter, *monitor.lock().unwrap().id);
-        Ok(())
-    }
-
-    fn raw_monitor_exit(&mut self, monitor: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint> {
-        jvmtifn!(self.jvmti, RawMonitorExit, *monitor.lock().unwrap().id);
-        Ok(())
-    }
-
     fn on_resource_exhausted(&mut self, callback: FnResourceExhausted) -> Result<(), ::jvmti::jint> {
         unsafe {
             EVENT_CALLBACKS.resource_exhausted = Some(callback);

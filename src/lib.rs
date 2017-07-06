@@ -37,7 +37,6 @@ extern crate time;
 
 lazy_static! {
     static ref STATIC_CONTEXT: Mutex<AgentContext<'static>> = Mutex::new(AgentContext::new());
-    static ref RAW_MONITOR_ID: Mutex<env::RawMonitorId> = Mutex::new(env::RawMonitorId::new());
 }
 
 #[derive(Default)]
@@ -73,8 +72,7 @@ pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw:
 
     if let Err(e) = jvmti_env
         .and_then(|mut ti| {
-            ti.on_resource_exhausted(resource_exhausted).unwrap();
-            ti.create_raw_monitor(String::from("jvmkill"), &RAW_MONITOR_ID)
+            ti.on_resource_exhausted(resource_exhausted)
         }) {
         return e;
     }
@@ -82,18 +80,6 @@ pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw:
     0
 }
 
-fn resource_exhausted(mut jvmti_env: env::JvmTiEnv, jni_env: env::JniEnv, flags: ::jvmti::jint) {
-    STATIC_CONTEXT.lock().map(|mut a| {
-        if let Err(err) = jvmti_env.raw_monitor_enter(&RAW_MONITOR_ID) {
-            eprintln!("ERROR: RawMonitorEnter failed: {}", err);
-            return;
-        }
-
-        a.on_oom(jni_env, flags);
-
-        if let Err(err) = jvmti_env.raw_monitor_exit(&RAW_MONITOR_ID) {
-            eprintln!("ERROR: RawMonitorExit failed: {}", err);
-            return;
-        }
-    }).unwrap();
+fn resource_exhausted(_: env::JvmTiEnv, jni_env: env::JniEnv, flags: ::jvmti::jint) {
+    STATIC_CONTEXT.lock().map(|mut a| a.on_oom(jni_env, flags)).unwrap();
 }

@@ -68,8 +68,6 @@ mod tests {
     use ::env::JvmTI;
     use ::env::FnResourceExhausted;
     use std::cell::RefCell;
-    use std::sync::Mutex;
-    use ::env::RawMonitorId;
     use ::heap::tagger::Tag;
 
     const test_error_code: ::jvmti::jint = 54;
@@ -127,18 +125,6 @@ mod tests {
     }
 
     impl JvmTI for MockJvmti {
-        fn create_raw_monitor(&mut self, _: String, _: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint> {
-            unimplemented!()
-        }
-
-        fn raw_monitor_enter(&mut self, _: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint> {
-            unimplemented!()
-        }
-
-        fn raw_monitor_exit(&mut self, _: &Mutex<RawMonitorId>) -> Result<(), ::jvmti::jint> {
-            unimplemented!()
-        }
-
         fn on_resource_exhausted(&mut self, _: FnResourceExhausted) -> Result<(), ::jvmti::jint> {
             unimplemented!()
         }
