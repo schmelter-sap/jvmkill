@@ -15,8 +15,6 @@
  */
 
 pub struct AgentController<'a> {
-    #[allow(dead_code)] // TODO: revisit this once port is complete
-    jvmti: ::env::JvmTiEnv,
     heuristic: Box<super::Heuristic + 'a>,
     actions: Vec<Box<super::Action>>
 }
@@ -26,7 +24,6 @@ impl<'a> AgentController<'a> {
         let parms = super::parms::AgentParameters::parseParameters(options);
 
         let mut ac = Self {
-            jvmti: ti,
             heuristic: Box::new(super::threshold::Threshold::new(parms.count_threshold, parms.time_threshold)),
             actions: Vec::new(),
         };
@@ -49,9 +46,8 @@ impl<'a> AgentController<'a> {
     }
 
     #[cfg(test)]
-    fn test_new(ti: ::env::JvmTiEnv, heuristic: Box<super::Heuristic + 'a>, actions: Vec<Box<super::Action>>) -> Self {
+    fn test_new(heuristic: Box<super::Heuristic + 'a>, actions: Vec<Box<super::Action>>) -> Self {
         Self {
-            jvmti: ti,
             heuristic: heuristic,
             actions: actions,
         }
@@ -125,9 +121,7 @@ mod tests {
     #[test]
     fn does_not_call_action_when_heuristic_returns_false() {
         let heuristic = Box::new(TestHeuristic::new());
-        let mut ac = super::AgentController::test_new(::env::JvmTiEnv::new(dummy_jni()).unwrap(),
-                                                      heuristic,
-                                                      vec![Box::new(TestAction::new())]);
+        let mut ac = super::AgentController::test_new(heuristic, vec![Box::new(TestAction::new())]);
         ac.on_oom(dummy_jni_env(), 0);
     }
 
@@ -135,34 +129,12 @@ mod tests {
     #[should_panic(expected = "TestAction.on_oom")]
     fn calls_action_when_heuristic_returns_true() {
         let heuristic = Box::new(TestHeuristic::new());
-        let mut ac = super::AgentController::test_new(::env::JvmTiEnv::new(dummy_jni()).unwrap(),
-                                                      heuristic,
-                                                      vec![Box::new(TestAction::new())]);
+        let mut ac = super::AgentController::test_new(heuristic, vec![Box::new(TestAction::new())]);
         ac.on_oom(dummy_jni_env(), 0);
         ac.on_oom(dummy_jni_env(), 0);
-    }
-
-    unsafe extern "C" fn test_get_env(_: *mut ::jvmti::JavaVM,
-                                      _: *mut *mut ::std::os::raw::c_void,
-                                      _: ::jvmti::jint)
-                                      -> ::jvmti::jint {
-        0
     }
 
     fn dummy_jni_env() -> ::env::JniEnv {
         ::env::JniEnv::new(::std::ptr::null_mut())
-    }
-
-    fn dummy_jni() -> *mut ::jvmti::JavaVM {
-        &mut (&::jvmti::JNIInvokeInterface_ {
-            reserved0: ::std::ptr::null_mut(),
-            reserved1: ::std::ptr::null_mut(),
-            reserved2: ::std::ptr::null_mut(),
-            DestroyJavaVM: None,
-            AttachCurrentThread: None,
-            DetachCurrentThread: None,
-            GetEnv: Some(test_get_env),
-            AttachCurrentThreadAsDaemon: None,
-        } as *const ::jvmti::JNIInvokeInterface_) as *mut *const ::jvmti::JNIInvokeInterface_
     }
 }
