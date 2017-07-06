@@ -59,7 +59,7 @@ mod tests {
         let d = String::from("d");
         let tag_d = t.class_tag(&d);
 
-        assert_eq!(c, t.class_signature(tag_c).unwrap());
-        assert_eq!(d, t.class_signature(tag_d).unwrap());
+        assert_eq!(c, t.class_signature(tag_c).expect("test error"));
+        assert_eq!(d, t.class_signature(tag_d).expect("test error"));
     }
 }

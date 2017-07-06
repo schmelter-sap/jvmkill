@@ -28,8 +28,14 @@ pub struct HeapHistogram<T: JvmTI + Clone> {
     max_entries: usize
 }
 
+impl<T: JvmTI + Clone> ::std::fmt::Display for HeapHistogram<T> {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "HeapHistogram")
+    }
+}
+
 impl<T: JvmTI + Clone> HeapHistogram<T> {
-    pub fn new(mut jvmti: T, max_entries: usize) -> Result<Self, ::jvmti::jint> {
+    pub fn new(mut jvmti: T, max_entries: usize) -> Result<Self, ::err::Error> {
         jvmti.enable_object_tagging()?;
         Ok(Self {
             jvmti: jvmti.clone(),
@@ -37,11 +43,11 @@ impl<T: JvmTI + Clone> HeapHistogram<T> {
         })
     }
 
-    fn print(&self, writer: &mut Write) {
+    fn print(&self, writer: &mut Write) -> Result<(), ::err::Error> {
         let mut tagger = Tagger::new();
 
         // Tag all loaded classes so we can determine each object's class signature during heap traversal.
-        self.jvmti.tag_loaded_classes(&mut tagger);
+        self.jvmti.tag_loaded_classes(&mut tagger)?;
 
         let mut heap_stats = Stats::new(self.max_entries);
 
@@ -50,15 +56,17 @@ impl<T: JvmTI + Clone> HeapHistogram<T> {
             if let Some(sig) = tagger.class_signature(class_tag) {
                 heap_stats.recordObject(sig, size);
             }
-        });
+        })?;
 
         heap_stats.print(writer);
+        Ok(())
     }
 }
 
 impl<T: JvmTI + Clone> super::Action for HeapHistogram<T> {
-    fn on_oom(&self, _: ::env::JniEnv, _: ::jvmti::jint) {
-        self.print(&mut stdout());
+    fn on_oom(&self, _: ::env::JniEnv, _: ::jvmti::jint) -> Result<(), ::err::Error> {
+        self.print(&mut stdout())?;
+        Ok(())
     }
 }
 
@@ -77,16 +85,22 @@ mod tests {
         let mockJvmti = MockJvmti::new();
         let hh = HeapHistogram::new(mockJvmti, 100);
         assert!(hh.is_ok());
-        assert!((hh.unwrap().jvmti as MockJvmti).object_tagging_enabled);
+        assert!((hh.expect("unexpected error").jvmti as MockJvmti).object_tagging_enabled);
     }
 
     #[test]
     fn new_percolates_enable_object_tagging_failure() {
         let mut mockJvmti = MockJvmti::new();
-        mockJvmti.object_tagging_enabled_result = Err(test_error_code);
+        mockJvmti.object_tagging_enabled_result = test_error_code;
         let hh = HeapHistogram::new(mockJvmti, 100);
         assert!(hh.is_err());
-        assert_eq!(hh.err().unwrap(), test_error_code);
+        match hh.err().expect("unexpected error") {
+            ::err::Error::JvmTi(msg, rc) => {
+                assert_eq!(msg, "test error".to_string());
+                assert_eq!(rc, test_error_code);
+            }
+            _ => assert!(false, "wrong error value"),
+        }
     }
 
     #[test]
@@ -95,10 +109,9 @@ mod tests {
         let hh = HeapHistogram::new(mockJvmti, 100);
 
         let mut buff: Vec<u8> = Vec::new();
-        hh.unwrap().print(&mut buff);
+        hh.expect("invalid HeapHistogram").print(&mut buff).expect("print failed");
         let string_buff = String::from_utf8(buff).expect("invalid UTF-8");
         assert_eq!(string_buff, "| Instance Count | Total Bytes | Class Name |\n| 2              | 200         | sig2       |\n| 1              | 10          | sig1       |\n".to_string());
-
     }
 
     #[derive(Clone, Copy, Default)]
@@ -109,7 +122,7 @@ mod tests {
 
     #[derive(Clone)]
     struct MockJvmti {
-        pub object_tagging_enabled_result: Result<(), ::jvmti::jint>,
+        pub object_tagging_enabled_result: ::jvmti::jint,
         pub object_tagging_enabled: bool,
         classes: RefCell<Classes>
     }
@@ -117,7 +130,7 @@ mod tests {
     impl MockJvmti {
         fn new() -> MockJvmti {
             MockJvmti {
-                object_tagging_enabled_result: Ok(()),
+                object_tagging_enabled_result: 0,
                 object_tagging_enabled: false,
                 classes: RefCell::new(Default::default())
             }
@@ -125,26 +138,33 @@ mod tests {
     }
 
     impl JvmTI for MockJvmti {
-        fn on_resource_exhausted(&mut self, _: FnResourceExhausted) -> Result<(), ::jvmti::jint> {
+        fn on_resource_exhausted(&mut self, _: FnResourceExhausted) -> Result<(), ::err::Error> {
             unimplemented!()
         }
 
-        fn enable_object_tagging(&mut self) -> Result<(), ::jvmti::jint> {
+        fn enable_object_tagging(&mut self) -> Result<(), ::err::Error> {
             self.object_tagging_enabled = true;
-            self.object_tagging_enabled_result
+            if self.object_tagging_enabled_result == 0 {
+                Ok(())
+            } else {
+                Err(::err::Error::JvmTi("test error".to_string(), self.object_tagging_enabled_result))
+            }
         }
 
-        fn tag_loaded_classes(&self, tagger: &mut Tag) {
+        fn tag_loaded_classes(&self, tagger: &mut Tag) -> Result<(), ::err::Error> {
             let mut c = self.classes.borrow_mut();
             c.t1 = tagger.class_tag(&"sig1".to_string());
             c.t2 = tagger.class_tag(&"sig2".to_string());
+            Ok(())
         }
 
-        fn traverse_live_heap<F>(&self, mut closure: F) where F: FnMut(::jvmti::jlong, ::jvmti::jlong) {
+        fn traverse_live_heap<F>(&self, mut closure: F) -> Result<(), ::err::Error>
+            where F: FnMut(::jvmti::jlong, ::jvmti::jlong) {
             let c = self.classes.borrow();
             closure(c.t1, 10);
             closure(c.t2, 100);
             closure(c.t2, 100);
+            Ok(())
         }
     }
 }

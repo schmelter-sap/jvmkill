@@ -29,7 +29,7 @@ impl<'a> AgentController<'a> {
         };
 
         if parms.print_heap_histogram {
-            ac.actions.push(Box::new(super::heaphistogram::HeapHistogram::new(ti, parms.heap_histogram_max_entries)?));
+            ac.actions.push(Box::new(super::heaphistogram::HeapHistogram::new(ti, parms.heap_histogram_max_entries).map_err(|err| err.rc())?));
         }
 
         if let Some(path) = parms.heap_dump_path {
@@ -69,7 +69,9 @@ impl<'a> super::MutAction for AgentController<'a> {
 
         if self.heuristic.on_oom() {
             for action in &self.actions {
-                action.on_oom(jni_env, resource_exhaustion_flags);
+                if let Err(error) = action.on_oom(jni_env, resource_exhaustion_flags) {
+                    eprintln!("ERROR: {} action failed: {}", action, error);
+                }
             }
         } else if resource_exhaustion_flags & oom_error == oom_error {
             eprintln!("\nThe JVM is about to throw a java.lang.OutOfMemoryError.");
@@ -112,8 +114,14 @@ mod tests {
         }
     }
 
+    impl ::std::fmt::Display for TestAction {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            write!(f, "TestAction")
+        }
+    }
+
     impl super::super::Action for TestAction {
-        fn on_oom(&self, _: ::env::JniEnv, _: ::jvmti::jint) {
+        fn on_oom(&self, _: ::env::JniEnv, _: ::jvmti::jint) -> Result<(), ::err::Error> {
             panic!("TestAction.on_oom")
         }
     }

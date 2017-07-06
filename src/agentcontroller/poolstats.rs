@@ -22,66 +22,72 @@ impl PoolStats {
     }
 }
 
+impl ::std::fmt::Display for PoolStats {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "PoolStats")
+    }
+}
+
 impl super::Action for PoolStats {
-    fn on_oom(&self, mut jni_env: ::env::JniEnv, resource_exhaustion_flags: ::jvmti::jint) {
+    fn on_oom(&self, mut jni_env: ::env::JniEnv, resource_exhaustion_flags: ::jvmti::jint) -> Result<(), ::err::Error> {
         // Do not attempt to obtain pool stats on thread exhaustion as this fails abruptly.
         const threads_exhausted: ::jvmti::jint = ::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as ::jvmti::jint;
         if resource_exhaustion_flags & threads_exhausted == threads_exhausted {
-            eprintln!("\nThe JVM was unable to create a thread. In these circumstances, memory usage statistics cannot be determined.");
-            return;
+            return Err(::err::Error::ActionUnavailableOnThreadExhaustion("determine memory usage statistics".to_string()));
         }
 
-        let mf_class = jni_env.find_class("java/lang/management/ManagementFactory").unwrap();
-        let get_memory_mxbean_method_id = jni_env.get_static_method_id(mf_class, "getMemoryMXBean", "()Ljava/lang/management/MemoryMXBean;").unwrap();
-        let memory_mxbean = jni_env.call_static_object_method(mf_class, get_memory_mxbean_method_id).unwrap();
+        let mf_class = jni_env.find_class("java/lang/management/ManagementFactory")?;
+        let get_memory_mxbean_method_id = jni_env.get_static_method_id(mf_class, "getMemoryMXBean", "()Ljava/lang/management/MemoryMXBean;")?;
+        let memory_mxbean = jni_env.call_static_object_method(mf_class, get_memory_mxbean_method_id)?;
 
-        let memory_mxbean_class = jni_env.get_object_class(memory_mxbean).unwrap();
+        let memory_mxbean_class = jni_env.get_object_class(memory_mxbean)?;
 
-        let heap_memory_usage_method_id = jni_env.get_method_id(memory_mxbean_class, "getHeapMemoryUsage", "()Ljava/lang/management/MemoryUsage;").unwrap();
-        let heap_usage = jni_env.call_object_method(memory_mxbean, heap_memory_usage_method_id).unwrap();
+        let heap_memory_usage_method_id = jni_env.get_method_id(memory_mxbean_class, "getHeapMemoryUsage", "()Ljava/lang/management/MemoryUsage;")?;
+        let heap_usage = jni_env.call_object_method(memory_mxbean, heap_memory_usage_method_id)?;
 
-        let non_heap_memory_usage_method_id = jni_env.get_method_id(memory_mxbean_class, "getNonHeapMemoryUsage", "()Ljava/lang/management/MemoryUsage;").unwrap();
-        let non_heap_usage = jni_env.call_object_method(memory_mxbean, non_heap_memory_usage_method_id).unwrap();
+        let non_heap_memory_usage_method_id = jni_env.get_method_id(memory_mxbean_class, "getNonHeapMemoryUsage", "()Ljava/lang/management/MemoryUsage;")?;
+        let non_heap_usage = jni_env.call_object_method(memory_mxbean, non_heap_memory_usage_method_id)?;
 
-        let heap_usage_stats = usage_stats(jni_env, heap_usage);
-        let non_heap_usage_stats = usage_stats(jni_env, non_heap_usage);
+        let heap_usage_stats = usage_stats(jni_env, heap_usage)?;
+        let non_heap_usage_stats = usage_stats(jni_env, non_heap_usage)?;
         let output = &mut ::std::io::stdout();
         writeln_paced!(output, "\nMemory usage:\n   Heap memory: {}\n   Non-heap memory: {}", heap_usage_stats, non_heap_usage_stats);
 
         writeln_paced!(output, "\nMemory pool usage:");
 
-        let get_mem_pool_mxbeans_method_id = jni_env.get_static_method_id(mf_class, "getMemoryPoolMXBeans", "()Ljava/util/List;").unwrap();
-        let mem_pool_mxbeans = jni_env.call_static_object_method(mf_class, get_mem_pool_mxbeans_method_id).unwrap();
-        let list_class = jni_env.find_class("java/util/List").unwrap();
-        let size_method_id = jni_env.get_method_id(list_class, "size", "()I").unwrap();
-        let get_method_id = jni_env.get_method_id(list_class, "get", "(I)Ljava/lang/Object;").unwrap();
-        let mem_pool_mxbean_class = jni_env.find_class("java/lang/management/MemoryPoolMXBean").unwrap();
-        let get_name_method_id = jni_env.get_method_id(mem_pool_mxbean_class, "getName", "()Ljava/lang/String;").unwrap();
-        let get_usage_method_id = jni_env.get_method_id(mem_pool_mxbean_class, "getUsage", "()Ljava/lang/management/MemoryUsage;").unwrap();
+        let get_mem_pool_mxbeans_method_id = jni_env.get_static_method_id(mf_class, "getMemoryPoolMXBeans", "()Ljava/util/List;")?;
+        let mem_pool_mxbeans = jni_env.call_static_object_method(mf_class, get_mem_pool_mxbeans_method_id)?;
+        let list_class = jni_env.find_class("java/util/List")?;
+        let size_method_id = jni_env.get_method_id(list_class, "size", "()I")?;
+        let get_method_id = jni_env.get_method_id(list_class, "get", "(I)Ljava/lang/Object;")?;
+        let mem_pool_mxbean_class = jni_env.find_class("java/lang/management/MemoryPoolMXBean")?;
+        let get_name_method_id = jni_env.get_method_id(mem_pool_mxbean_class, "getName", "()Ljava/lang/String;")?;
+        let get_usage_method_id = jni_env.get_method_id(mem_pool_mxbean_class, "getUsage", "()Ljava/lang/management/MemoryUsage;")?;
         let size = jni_env.call_int_method(mem_pool_mxbeans, size_method_id);
 
         for i in 0..size {
-            let pool_mxbean = jni_env.call_object_method_with_int(mem_pool_mxbeans, get_method_id, i).unwrap();
-            let name = jni_env.call_object_method(pool_mxbean, get_name_method_id).unwrap() as ::jvmti::jstring;
-            let usage = jni_env.call_object_method(pool_mxbean, get_usage_method_id).unwrap();
+            let pool_mxbean = jni_env.call_object_method_with_int(mem_pool_mxbeans, get_method_id, i)?;
+            let name = jni_env.call_object_method(pool_mxbean, get_name_method_id)? as ::jvmti::jstring;
+            let usage = jni_env.call_object_method(pool_mxbean, get_usage_method_id)?;
             let (name_utf_chars, name_cstr) = jni_env.get_string_utf_chars(name);
-            let stats = usage_stats(jni_env, usage);
+            let stats = usage_stats(jni_env, usage)?;
             writeln_paced!(output, "   {}: {}", name_cstr.to_string_lossy().into_owned(), stats);
             jni_env.release_string_utf_chars(name, name_utf_chars);
         }
+        Ok(())
     }
 }
 
-fn usage_stats(mut jni_env: ::env::JniEnv, usage: ::jvmti::jobject) -> String {
-    let memory_usage_class = jni_env.get_object_class(usage).unwrap();
-    let get_init_method_id = jni_env.get_method_id(memory_usage_class, "getInit", "()J").unwrap();
-    let get_used_method_id = jni_env.get_method_id(memory_usage_class, "getUsed", "()J").unwrap();
-    let get_committed_method_id = jni_env.get_method_id(memory_usage_class, "getCommitted", "()J").unwrap();
-    let get_max_method_id = jni_env.get_method_id(memory_usage_class, "getMax", "()J").unwrap();
+fn usage_stats(mut jni_env: ::env::JniEnv, usage: ::jvmti::jobject) -> Result<String, ::err::Error> {
+    let memory_usage_class = jni_env.get_object_class(usage)?;
+    let get_init_method_id = jni_env.get_method_id(memory_usage_class, "getInit", "()J")?;
+    let get_used_method_id = jni_env.get_method_id(memory_usage_class, "getUsed", "()J")?;
+    let get_committed_method_id = jni_env.get_method_id(memory_usage_class, "getCommitted", "()J")?;
+    let get_max_method_id = jni_env.get_method_id(memory_usage_class, "getMax", "()J")?;
 
-    format!("init {}, used {}, committed {}, max {}",
+    Ok(format!("init {}, used {}, committed {}, max {}",
             jni_env.call_long_method(usage, get_init_method_id),
             jni_env.call_long_method(usage, get_used_method_id),
             jni_env.call_long_method(usage, get_committed_method_id),
-            jni_env.call_long_method(usage, get_max_method_id))
+            jni_env.call_long_method(usage, get_max_method_id)))
 }

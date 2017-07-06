@@ -18,7 +18,7 @@ macro_rules! eprintln (
     ($($arg:tt)*) => { {
         use std::io::Write;
 
-        writeln!(&mut ::std::io::stderr(), $($arg)*).unwrap();
+        writeln!(&mut ::std::io::stderr(), $($arg)*).expect("write failed");
     } }
 );
 
@@ -32,6 +32,6 @@ macro_rules! writeln_paced (
 
         thread::sleep(time::Duration::from_millis(1));
 
-        writeln!($($arg)*).unwrap();
+        writeln!($($arg)*).expect("write failed");
     } }
 );

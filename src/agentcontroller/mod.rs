@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+use std::fmt::Display;
+
 pub mod controller;
 
 pub trait MutAction {
@@ -32,7 +34,7 @@ trait Heuristic {
     fn on_oom(&mut self) -> bool;
 }
 
-trait Action {
+trait Action : Display {
     // See https://docs.oracle.com/javase/8/docs/platform/jvmti/jvmti.html#jvmtiResourceExhaustionFlags
-    fn on_oom(&self, jni_env: ::env::JniEnv, resource_exhaustion_flags: ::jvmti::jint);
+    fn on_oom(&self, jni_env: ::env::JniEnv, resource_exhaustion_flags: ::jvmti::jint) -> Result<(), ::err::Error>;
 }

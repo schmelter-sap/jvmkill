@@ -44,7 +44,7 @@ impl AgentParameters {
         unsafe {
             cslice = CStr::from_ptr(options);
         }
-        let s: &str = cslice.to_str().unwrap();
+        let s: &str = cslice.to_str().expect("options are not valid UTF-8");
         let options = s.split(',').collect::<Vec<_>>();
         for option in &options {
             if option.is_empty() {
@@ -236,7 +236,7 @@ mod tests {
     fn parse(o: &str) -> super::AgentParameters {
         use std::ffi::CString;
 
-        let cstr = CString::new(o).unwrap();
+        let cstr = CString::new(o).expect("test error");
         super::AgentParameters::parseParameters(cstr.as_ptr())
     }
 }

@@ -23,6 +23,7 @@ use std::sync::Mutex;
 #[macro_use]
 mod macros;
 mod env;
+mod err;
 mod heap;
 mod jvmti;
 mod agentcontroller;
@@ -66,13 +67,13 @@ pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw:
 
     if let Err(e) = jvmti_env
         .and_then(|ti| agentcontroller::controller::AgentController::new(ti, options))
-        .map(|ac| STATIC_CONTEXT.lock().unwrap().set(ac)) {
+        .map(|ac| STATIC_CONTEXT.lock().expect("static lock was not acquired").set(ac)) {
         return e;
     }
 
     if let Err(e) = jvmti_env
         .and_then(|mut ti| {
-            ti.on_resource_exhausted(resource_exhausted)
+            ti.on_resource_exhausted(resource_exhausted).map_err(|err| err.rc())
         }) {
         return e;
     }
@@ -81,5 +82,5 @@ pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw:
 }
 
 fn resource_exhausted(_: env::JvmTiEnv, jni_env: env::JniEnv, flags: ::jvmti::jint) {
-    STATIC_CONTEXT.lock().map(|mut a| a.on_oom(jni_env, flags)).unwrap();
+    STATIC_CONTEXT.lock().expect("static lock was not acquired").on_oom(jni_env, flags);
 }
