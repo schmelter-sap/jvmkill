@@ -21,22 +21,22 @@ command and that system call can fail for large JVMs due to memory
 overcommit limits in the operating system.  This is the problem that
 motivated the development of this agent.
 
-# Rust
+# Pre-requisites
 
-A prototype agent written in Rust is being prototyped. To build it, issue:
+Install [Rust][].
 
-    cargo build --release
-    
-and to test it, issue:
+Ensure that you have libclang v3.9 or later installed. To install this on Ubuntu Trusty see [ask ubuntu][]
+and set `$LIBCLANG_PATH` to the directory containing (v3.9 or later of) `libclang.so` and `libclang.so.1`.
 
-    cargo test --all
+[Rust]: https://www.rust-lang.org/en-US/install.html
+[ask ubuntu]: https://askubuntu.com/questions/787383/how-to-install-llvm-3-9
     
 # Building
 
-To build the agent and run the tests, issue:
+To build the agent and run the tests, install the above pre-requisites, then issue:
 
     make JAVA_HOME=/path/to/jdk
-
+    
 # Usage
 
 Run Java with the agent added as a JVM argument:

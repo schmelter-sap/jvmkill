@@ -2,9 +2,13 @@ ifndef JAVA_HOME
     $(error JAVA_HOME not set)
 endif
 
-TARGET=target/release/libjvmkill.dylib
+ifeq ($(shell uname -s),Darwin)
+  TARGET=target/release/libjvmkill.dylib
+else
+  TARGET=target/release/libjvmkill.so
+endif
 
-.PHONY: all build clean alltests ctests threadtests threadtestbasic threadtest0 threadtest-10-2 memtests memtest0 memtest-10-2
+.PHONY: all build clean alltests threadtests threadtestbasic threadtest0 threadtest-10-2 threadtestpspawn-10-2 memtests memtest0 memtest-10-2
 
 all: alltests build
 
