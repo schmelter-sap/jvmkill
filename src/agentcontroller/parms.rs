@@ -40,28 +40,30 @@ impl AgentParameters {
         let mut print_memory_usage: usize = 1;
         let mut heap_dump_path: Option<PathBuf> = None;
 
-        let cslice;
-        unsafe {
-            cslice = CStr::from_ptr(options);
-        }
-        let s: &str = cslice.to_str().expect("options are not valid UTF-8");
-        let options = s.split(',').collect::<Vec<_>>();
-        for option in &options {
-            if option.is_empty() {
-                continue
+        if options != ::std::ptr::null() {
+            let cslice;
+            unsafe {
+                cslice = CStr::from_ptr(options);
             }
-            let tokens = option.splitn(2, '=').collect::<Vec<_>>();
-            assert_eq!(tokens.len(), 2, "invalid option: {}", option);
-            let key = tokens[0];
-            let value = tokens[1];
-            match key {
-                "time" => if !value.is_empty() { time_threshold = value.parse().expect("not a number") },
-                "count" => if !value.is_empty() { count_threshold = value.parse().expect("not a number") },
-                "printHeapHistogram" => if !value.is_empty() { print_heap_histogram = value.parse().expect("not a number") },
-                "heapHistogramMaxEntries" => if !value.is_empty() { heap_histogram_max_entries = value.parse().expect("not a number") },
-                "printMemoryUsage" => if !value.is_empty() { print_memory_usage = value.parse().expect("not a number") },
-                "heapDumpPath" => heap_dump_path = Some(PathBuf::from(value)),
-                _ => assert!(false, "unknown option: {}", key),
+            let s: &str = cslice.to_str().expect("options are not valid UTF-8");
+            let options = s.split(',').collect::<Vec<_>>();
+            for option in &options {
+                if option.is_empty() {
+                    continue
+                }
+                let tokens = option.splitn(2, '=').collect::<Vec<_>>();
+                assert_eq!(tokens.len(), 2, "invalid option: {}", option);
+                let key = tokens[0];
+                let value = tokens[1];
+                match key {
+                    "time" => if !value.is_empty() { time_threshold = value.parse().expect("not a number") },
+                    "count" => if !value.is_empty() { count_threshold = value.parse().expect("not a number") },
+                    "printHeapHistogram" => if !value.is_empty() { print_heap_histogram = value.parse().expect("not a number") },
+                    "heapHistogramMaxEntries" => if !value.is_empty() { heap_histogram_max_entries = value.parse().expect("not a number") },
+                    "printMemoryUsage" => if !value.is_empty() { print_memory_usage = value.parse().expect("not a number") },
+                    "heapDumpPath" => heap_dump_path = Some(PathBuf::from(value)),
+                    _ => assert!(false, "unknown option: {}", key),
+                }
             }
         }
 
@@ -83,6 +85,16 @@ mod tests {
     #[test]
     fn defaults() {
         let ap = parse("");
+        assert_eq!(ap.time_threshold, 1);
+        assert_eq!(ap.count_threshold, 0);
+        assert!(!ap.print_heap_histogram);
+        assert_eq!(ap.heap_histogram_max_entries, 100);
+        assert!(ap.print_memory_usage);
+    }
+
+    #[test]
+    fn null_pointer() {
+        let ap = super::AgentParameters::parseParameters(::std::ptr::null());
         assert_eq!(ap.time_threshold, 1);
         assert_eq!(ap.count_threshold, 0);
         assert!(!ap.print_heap_histogram);
