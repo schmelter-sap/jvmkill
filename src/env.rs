@@ -17,9 +17,9 @@
 use std::mem::size_of;
 use std::mem::transmute;
 use std::os::raw::c_uint;
-use ::std::ptr;
-use ::std::ffi::CString;
-use ::std::ffi::CStr;
+use std::ptr;
+use std::ffi::CString;
+use std::ffi::CStr;
 use ::jvmti::jvmtiEnv;
 use ::heap::tagger::Tag;
 
