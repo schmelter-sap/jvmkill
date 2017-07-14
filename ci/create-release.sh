@@ -14,15 +14,15 @@ update_release() {
   sed -E -i '' "s|(^[ ]*VERSION:[ ]*).+$|\1$version|" $file
 }
 
-update_release ci/build-osx.yml libs-release-local $RELEASE
-update_release ci/build-trusty.yml libs-release-local $RELEASE
+update_release ci/deploy-osx.yml libs-release-local $RELEASE
+update_release ci/deploy-trusty.yml libs-release-local $RELEASE
 git add .
 git commit --message "v$RELEASE Release"
 
 git tag -s v$RELEASE -m "v$RELEASE"
 git reset --hard HEAD^1
 
-update_release ci/build-osx.yml libs-snapshot-local $SNAPSHOT
-update_release ci/build-trusty.yml libs-snapshot-local $SNAPSHOT
+update_release ci/deploy-osx.yml libs-snapshot-local $SNAPSHOT
+update_release ci/deploy-trusty.yml libs-snapshot-local $SNAPSHOT
 git add .
 git commit --message "v$SNAPSHOT Development"
