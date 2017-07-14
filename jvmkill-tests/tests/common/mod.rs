@@ -19,11 +19,11 @@ use std::path::PathBuf;
 use std::process::Command;
 
 pub fn run_java(class: &str, arguments: &str) -> bool {
-    Command::new(&java())
+    return Command::new(&java())
         .arg(format!("-agentpath:{}{}", jvmkill().to_str().unwrap(), arguments))
         .arg("-cp").arg(jvmkill_test().to_str().unwrap())
         .arg(class)
-        .status().unwrap().success()
+        .status().unwrap().success();
 }
 
 fn java() -> PathBuf {
