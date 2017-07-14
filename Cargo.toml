@@ -1,0 +1,6 @@
+[workspace]
+members = [
+  "jvmkill",
+  "jvmkill-tests",
+  "resource-exhaustion-generator"
+]
