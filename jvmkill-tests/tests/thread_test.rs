@@ -20,20 +20,23 @@ mod common;
 
 #[test]
 fn basic() {
-    assert!(!run_java("org.cloudfoundry.jvmkill.ThreadExhaustion", ""));
+    assert!(!run_java("org.cloudfoundry.jvmkill.ThreadExhaustion", "", &[], &["Resource exhaustion event: the JVM was unable to create a thread.",
+        "ERROR: PoolStats action failed: cannot determine memory usage statistics since the JVM is unable to create a thread"]));
 }
 
 #[test]
 fn print_memory_usage_0() {
-    assert!(!run_java("org.cloudfoundry.jvmkill.ThreadExhaustion", "=printMemoryUsage=0"));
+    assert!(!run_java("org.cloudfoundry.jvmkill.ThreadExhaustion", "=printMemoryUsage=0", &[], &["jvmkill killing current process"]));
 }
 
 #[test]
 fn time_10_count_2() {
-    assert!(!run_java("org.cloudfoundry.jvmkill.ThreadExhaustion", "=time=10,count=2,printHeapHistogram=1,heapHistogramMaxEntries=10,printMemoryUsage=0"));
+    assert!(!run_java("org.cloudfoundry.jvmkill.ThreadExhaustion", "=time=10,count=2,printHeapHistogram=1,heapHistogramMaxEntries=10,printMemoryUsage=0",
+                      &["Lorg/cloudfoundry/jvmkill/Sleeper;"], &["ResourceExhausted! (1/2)"]));
 }
 
 #[test]
 fn parallel_time_10_count_2() {
-    assert!(!run_java("org.cloudfoundry.jvmkill.ParallelThreadExhaustion", "=time=10,count=2"));
+    assert!(!run_java("org.cloudfoundry.jvmkill.ParallelThreadExhaustion", "=time=10,count=2", &[],
+                      &["ResourceExhausted! (1/2)", "jvmkill killing current process"]));
 }

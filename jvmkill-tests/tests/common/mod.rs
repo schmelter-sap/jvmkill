@@ -18,13 +18,34 @@ use std::env;
 use std::path::PathBuf;
 use std::process::Command;
 
-pub fn run_java(class: &str, arguments: &str) -> bool {
-    return Command::new(&java())
+pub fn run_java(class: &str, arguments: &str, expected_stdout: &[&str], expected_stderr: &[&str]) -> bool {
+    let output = Command::new(&java())
         .arg(format!("-agentpath:{}{}", jvmkill().to_str().unwrap(), arguments))
         .arg("-cp").arg(jvmkill_test().to_str().unwrap())
         .arg("-Xmx50m")
         .arg(class)
-        .status().unwrap().success();
+        .output().expect("failed to run Java process");
+
+    assert_contents(&output.stdout, expected_stdout);
+    assert_contents(&output.stderr, expected_stderr);
+
+    output.status.success()
+}
+
+fn assert_contents(stream: &Vec<u8>, expected :&[&str]) {
+    let s = String::from_utf8_lossy(stream);
+    println!("OUTPUT:\n{}\n:OUTPUT", s);
+    let mut success = true;
+    for o in expected {
+        if !s.contains(o) {
+            println!("{}", o);
+            success = false;
+        }
+    }
+    if !success {
+        println!("the above were not found in:\n{}", s);
+    }
+    assert!(success);
 }
 
 fn java() -> PathBuf {
