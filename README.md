@@ -33,9 +33,15 @@ and set `$LIBCLANG_PATH` to the directory containing (v3.9 or later of) `libclan
     
 # Building
 
-To build the agent and run the tests, install the above pre-requisites, then issue:
+To build the agent, install the above pre-requisites, then issue:
 
-    make JAVA_HOME=/path/to/jdk
+    cargo build --release -p jvmkill
+    
+# Testing
+
+To run the tests, install the above pre-requisites, then issue:
+
+    cargo test --all
     
 # Usage
 

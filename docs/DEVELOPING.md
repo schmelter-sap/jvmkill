@@ -7,11 +7,10 @@ jvmkill is a [JVMTI][] agent written in Rust and built using header files provid
 ## Dependencies
 
 jvmkill has the following dependencies:
-* make for building
 * Rust for compilation and linking
 * JDK for JVMTI and JNI header files
 
-Development was undertaken on macOS 10.12 using GNU Make 3.8.1, Rust 1.18.0, and Apple JDK 1.8.0_66.
+Development was undertaken on macOS 10.12 using Rust 1.18.0 and Apple JDK 1.8.0_66.
 
 The [jvmkill ci pipeline][] builds the agent for various platforms (at the time of writing: macOS and Ubuntu Trusty). The pipeline definition is stored in the [Java Experience Concourse git repo][] (a private repository).
 
@@ -34,9 +33,9 @@ The following sequence diagram shows some typical interactions between the JVM a
 
 ## Testing
 
-jvmkill has unit and other tests. See the [Building][] section of the README for how to run the tests.
+jvmkill has unit and other tests. See the [Testing][] section of the README for how to run the tests.
                                   
-[Building]: ../README.md#Building
+[Building]: ../README.md#Testing
 
 ## Contributing
 

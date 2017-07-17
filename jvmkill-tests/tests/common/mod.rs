@@ -22,6 +22,7 @@ pub fn run_java(class: &str, arguments: &str) -> bool {
     return Command::new(&java())
         .arg(format!("-agentpath:{}{}", jvmkill().to_str().unwrap(), arguments))
         .arg("-cp").arg(jvmkill_test().to_str().unwrap())
+        .arg("-Xmx5m")
         .arg(class)
         .status().unwrap().success();
 }
