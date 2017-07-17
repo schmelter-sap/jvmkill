@@ -9,6 +9,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="Rust &lt;resource-exhaustion-generator&gt;" level="project" />
     <orderEntry type="library" name="Cargo &lt;resource-exhaustion-generator&gt;" level="project" />
   </component>
 </module>

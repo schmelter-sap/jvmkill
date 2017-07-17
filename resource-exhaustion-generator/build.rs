@@ -17,6 +17,8 @@
 use std::process::Command;
 
 fn main() {
-    assert!(Command::new("./mvnw").arg("clean").arg("package")
+    assert!(Command::new("./mvnw")
+        .arg("clean")
+        .arg("package")
         .status().unwrap().success());
 }
