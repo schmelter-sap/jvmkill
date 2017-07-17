@@ -16,9 +16,7 @@
       </option>
       <option name="nocapture" value="true" />
     </parameters>
-    <module name="jvmkill">
-      <option name="moduleName" value="jvmkill" />
-    </module>
+    <module name="jvmkill" />
     <method />
   </configuration>
 </component>
