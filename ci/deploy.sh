@@ -2,8 +2,8 @@
 
 set -e -u
 
-ln -fs $PWD/cargo $HOME/.cargo
-ln -fs $PWD/maven $HOME/.m2
+[ -d $PWD/cargo ] && ln -fs $PWD/cargo $HOME/.cargo
+[ -d $PWD/maven ] && ln -fs $PWD/maven $HOME/.m2
 
 PATH=/usr/local/bin:$PATH
 

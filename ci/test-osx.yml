@@ -4,10 +4,6 @@ platform: darwin
 inputs:
 - name: jvmkill
 
-caches:
-- path: cargo
-- path: maven
-
 run:
   path: jvmkill/ci/test.sh
 
