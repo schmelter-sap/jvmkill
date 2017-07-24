@@ -14,14 +14,6 @@
  * limitations under the License.
  */
 
-macro_rules! eprintln (
-    ($($arg:tt)*) => { {
-        use std::io::Write;
-
-        writeln!(&mut ::std::io::stderr(), $($arg)*).expect("write failed");
-    } }
-);
-
 // writeln_paced is similar to writeln except it reduces the risk of loggregator missing some entries
 // by sleeping before each write. Also, it panics if the underlying writeln fails.
 macro_rules! writeln_paced (
