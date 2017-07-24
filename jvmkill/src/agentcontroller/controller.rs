@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+use libc::SIGQUIT;
+
 pub struct AgentController<'a> {
     heuristic: Box<super::Heuristic + 'a>,
     actions: Vec<Box<super::Action>>
@@ -39,6 +41,10 @@ impl<'a> AgentController<'a> {
         if parms.print_memory_usage {
             ac.actions.push(Box::new(super::poolstats::PoolStats::new()));
         }
+
+        let mut threadDump = super::kill::Kill::new();
+        threadDump.setSignal(SIGQUIT);
+        ac.actions.push(Box::new(threadDump));
 
         ac.actions.push(Box::new(super::kill::Kill::new()));
 
