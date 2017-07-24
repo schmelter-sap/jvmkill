@@ -18,6 +18,7 @@ use libc::c_int;
 use libc::SIGKILL;
 use libc::getpid;
 use libc::kill;
+use std::{thread, time};
 
 pub struct Kill {
     signal: c_int
@@ -30,7 +31,6 @@ impl Kill {
         }
     }
 
-    #[cfg(test)]
     pub fn setSignal(&mut self, signal: c_int) {
         self.signal = signal;
     }
@@ -48,6 +48,10 @@ impl super::Action for Kill {
         unsafe {
             kill(getpid(), self.signal);
         }
+
+        // Allow any thread dump time to appear.
+        thread::sleep(time::Duration::from_millis(5000));
+
         Ok(())
     }
 }
