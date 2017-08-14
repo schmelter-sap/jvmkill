@@ -10,7 +10,7 @@ jvmkill has the following dependencies:
 * Rust for compilation and linking
 * JDK for JVMTI and JNI header files
 
-Development was undertaken on macOS 10.12 using Rust 1.18.0 and Apple JDK 1.8.0_66.
+Development was undertaken on macOS 10.12 using Rust 1.19.0 and Apple JDK 1.8.0_66.
 
 The [jvmkill ci pipeline][] builds the agent for various platforms (at the time of writing: macOS and Ubuntu Trusty). The pipeline definition is stored in the [Java Experience Concourse git repo][] (a private repository).
 

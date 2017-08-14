@@ -23,7 +23,7 @@ motivated the development of this agent.
 
 # Pre-requisites
 
-Install [Rust][].
+Install [Rust][] v1.19.0 or later.
 
 Ensure that you have libclang v3.9 or later installed. To install this on Ubuntu Trusty see [ask ubuntu][]
 and set `$LIBCLANG_PATH` to the directory containing (v3.9 or later of) `libclang.so` and `libclang.so.1`.
