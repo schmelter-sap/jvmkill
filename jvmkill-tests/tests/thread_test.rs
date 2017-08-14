@@ -32,7 +32,7 @@ fn print_memory_usage_0() {
 #[test]
 fn time_10_count_2() {
     assert!(!run_java("org.cloudfoundry.jvmkill.ThreadExhaustion", "=time=10,count=2,printHeapHistogram=1,heapHistogramMaxEntries=10,printMemoryUsage=0",
-                      &["Ljava/lang/Class;"], &["ResourceExhausted! (1/2)"]));
+                      &[], &["ResourceExhausted! (1/2)", "jvmkill killing current process"]));
 }
 
 #[test]
