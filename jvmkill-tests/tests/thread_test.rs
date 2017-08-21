@@ -38,5 +38,5 @@ fn time_10_count_2() {
 #[test]
 fn parallel_time_10_count_2() {
     assert!(!run_java("org.cloudfoundry.jvmkill.ParallelThreadExhaustion", "=time=10,count=2,printHeapHistogram=0,printMemoryUsage=0", &[],
-                      &["ResourceExhausted! (1/2)", "jvmkill killing current process"]));
+                      &["jvmkill killing current process"]));
 }
