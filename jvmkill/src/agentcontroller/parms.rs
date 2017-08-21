@@ -40,7 +40,7 @@ impl AgentParameters {
         let mut print_memory_usage: usize = 1;
         let mut heap_dump_path: Option<PathBuf> = None;
 
-        if options != ::std::ptr::null() {
+        if !options.is_null() {
             let cslice;
             unsafe {
                 cslice = CStr::from_ptr(options);

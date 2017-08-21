@@ -55,7 +55,7 @@ impl<'a> AgentContext<'a> {
     }
 
     pub fn on_oom(&mut self, jni_env: ::env::JniEnv, resource_exhaustion_flags: ::jvmti::jint) {
-        self.ac.as_mut().map(|mut a| a.on_oom(jni_env, resource_exhaustion_flags));
+        self.ac.as_mut().map(|a| a.on_oom(jni_env, resource_exhaustion_flags));
     }
 }
 

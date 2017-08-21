@@ -76,5 +76,5 @@ impl super::Action for HeapDump {
 }
 
 fn resolve_path(path: &PathBuf) -> Result<PathBuf, ::time::ParseError> {
-    strftime(path.to_str().expect("heapDumpPath is invalid UTF-8"), &now()).map(|resolved_path| PathBuf::from(resolved_path))
+    strftime(path.to_str().expect("heapDumpPath is invalid UTF-8"), &now()).map(PathBuf::from)
 }
