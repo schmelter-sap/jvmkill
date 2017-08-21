@@ -45,6 +45,8 @@ impl ::std::fmt::Display for Kill {
 impl super::Action for Kill {
     fn on_oom(&self, _: ::env::JniEnv, _: ::jvmti::jint) -> Result<(), ::err::Error> {
         eprintln!("\njvmkill killing current process");
+        // Allow time for above message to appear. This should not be necessary if standard error is written synchronously.
+        thread::sleep(time::Duration::from_millis(1000));
         unsafe {
             kill(getpid(), self.signal);
         }
