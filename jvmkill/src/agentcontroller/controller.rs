@@ -67,7 +67,7 @@ impl<'a> super::MutAction for AgentController<'a> {
         const oom_error: ::jvmti::jint = ::jvmti::JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR as ::jvmti::jint;
 
         if resource_exhaustion_flags & heap_exhausted == heap_exhausted {
-            eprintln!("\nResource exhaustion event: the JVM was unable to allocate memory from the heap.");
+            eprintln!("\nResource exhaustion event: the JVM was unable to allocate memory.");
         }
         if resource_exhaustion_flags & threads_exhausted == threads_exhausted {
             eprintln!("\nResource exhaustion event: the JVM was unable to create a thread.");
