@@ -15,19 +15,22 @@
  */
 
 use libc::SIGQUIT;
+use std::io::Write;
 
-pub struct AgentController<'a> {
+pub struct AgentController<'a, T: Write> {
     heuristic: Box<super::Heuristic + 'a>,
-    actions: Vec<Box<super::Action>>
+    actions: Vec<Box<super::Action>>,
+    log: T
 }
 
-impl<'a> AgentController<'a> {
-    pub fn new(ti: ::env::JvmTiEnv, options: *mut ::std::os::raw::c_char) -> Result<Self, ::jvmti::jint> {
+impl<'a, T: Write> AgentController<'a, T> {
+    pub fn new(ti: ::env::JvmTiEnv, options: *mut ::std::os::raw::c_char, log: T) -> Result<Self, ::jvmti::jint> {
         let parms = super::parms::AgentParameters::parseParameters(options);
 
         let mut ac = Self {
             heuristic: Box::new(super::threshold::Threshold::new(parms.count_threshold, parms.time_threshold)),
             actions: Vec::new(),
+            log: log
         };
 
         if parms.print_heap_histogram {
@@ -52,42 +55,53 @@ impl<'a> AgentController<'a> {
     }
 
     #[cfg(test)]
-    fn test_new(heuristic: Box<super::Heuristic + 'a>, actions: Vec<Box<super::Action>>) -> Self {
+    fn test_new(heuristic: Box<super::Heuristic + 'a>, actions: Vec<Box<super::Action>>, log: T) -> Self {
         Self {
             heuristic: heuristic,
             actions: actions,
+            log: log
         }
     }
 }
 
-impl<'a> super::MutAction for AgentController<'a> {
+impl<'a, T: Write> super::MutAction for AgentController<'a, T> {
     fn on_oom(&mut self, jni_env: ::env::JniEnv, resource_exhaustion_flags: ::jvmti::jint) {
-        const heap_exhausted: ::jvmti::jint = ::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as ::jvmti::jint;
-        const threads_exhausted: ::jvmti::jint = ::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as ::jvmti::jint;
         const oom_error: ::jvmti::jint = ::jvmti::JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR as ::jvmti::jint;
 
-        if resource_exhaustion_flags & heap_exhausted == heap_exhausted {
-            eprintln!("\nResource exhaustion event: the JVM was unable to allocate memory.");
-        }
-        if resource_exhaustion_flags & threads_exhausted == threads_exhausted {
-            eprintln!("\nResource exhaustion event: the JVM was unable to create a thread.");
-        }
+        writeln!(&mut self.log, "\nResource exhaustion event{}.", resource_exhaustion_symptom(resource_exhaustion_flags)).unwrap();
 
         if self.heuristic.on_oom() {
             for action in &self.actions {
                 if let Err(error) = action.on_oom(jni_env, resource_exhaustion_flags) {
-                    eprintln!("ERROR: {} action failed: {}", action, error);
+                    writeln!(&mut self.log, "ERROR: {} action failed: {}", action, error).unwrap();
                 }
             }
         } else if resource_exhaustion_flags & oom_error == oom_error {
-            eprintln!("\nThe JVM is about to throw a java.lang.OutOfMemoryError.");
+            writeln!(&mut self.log, "\nThe JVM is about to throw a java.lang.OutOfMemoryError.").unwrap();
         }
     }
 }
 
-unsafe impl<'a> Send for AgentController<'a> {}
+fn resource_exhaustion_symptom(resource_exhaustion_flags: ::jvmti::jint) -> &'static str {
+    const heap_exhausted: ::jvmti::jint = ::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as ::jvmti::jint;
+    const threads_exhausted: ::jvmti::jint = ::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as ::jvmti::jint;
 
-unsafe impl<'a> Sync for AgentController<'a> {}
+    if resource_exhaustion_flags & heap_exhausted == heap_exhausted {
+        if resource_exhaustion_flags & threads_exhausted == threads_exhausted {
+            ": the JVM was unable to allocate memory from the heap and create a thread"
+        } else {
+            ": the JVM was unable to allocate memory from the heap"
+        }
+    } else if resource_exhaustion_flags & threads_exhausted == threads_exhausted {
+        ": the JVM was unable to create a thread"
+    } else {
+        ""
+    }
+}
+
+unsafe impl<'a, T: Write> Send for AgentController<'a, T> {}
+
+unsafe impl<'a, T: Write> Sync for AgentController<'a, T> {}
 
 #[cfg(test)]
 mod tests {
@@ -132,20 +146,62 @@ mod tests {
         }
     }
 
+    trait Output {
+        fn output(&self) -> String;
+    }
+
+    impl<'a> Output for super::AgentController<'a, Vec<u8>> {
+        fn output(&self) -> String {
+            String::from_utf8(self.log.to_vec()).unwrap()
+        }
+    }
+
+    #[test]
+    fn prints_default_resource_exhaustion_message() {
+        let mut ac = test_ac();
+        ac.on_oom(dummy_jni_env(), 0);
+        assert_eq!(ac.output(), "\nResource exhaustion event.\n")
+    }
+
+    #[test]
+    fn prints_heap_resource_exhaustion_message() {
+        let mut ac = test_ac();
+        ac.on_oom(dummy_jni_env(), ::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as ::jvmti::jint);
+        assert_eq!(ac.output(), "\nResource exhaustion event: the JVM was unable to allocate memory from the heap.\n")
+    }
+
+    #[test]
+    fn prints_thread_resource_exhaustion_message() {
+        let mut ac = test_ac();
+        ac.on_oom(dummy_jni_env(), ::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as ::jvmti::jint);
+        assert_eq!(ac.output(), "\nResource exhaustion event: the JVM was unable to create a thread.\n")
+    }
+
+    #[test]
+    fn prints_heap_and_thread_resource_exhaustion_message() {
+        let mut ac = test_ac();
+        ac.on_oom(dummy_jni_env(), (::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as ::jvmti::jint) +
+            (::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS) as ::jvmti::jint);
+        assert_eq!(ac.output(), "\nResource exhaustion event: the JVM was unable to allocate memory from the heap and create a thread.\n")
+    }
+
     #[test]
     fn does_not_call_action_when_heuristic_returns_false() {
-        let heuristic = Box::new(TestHeuristic::new());
-        let mut ac = super::AgentController::test_new(heuristic, vec![Box::new(TestAction::new())]);
+        let mut ac = test_ac();
         ac.on_oom(dummy_jni_env(), 0);
     }
 
     #[test]
     #[should_panic(expected = "TestAction.on_oom")]
     fn calls_action_when_heuristic_returns_true() {
+        let mut ac = test_ac();
+        ac.on_oom(dummy_jni_env(), 0);
+        ac.on_oom(dummy_jni_env(), 0);
+    }
+
+    fn test_ac<'a>() -> super::AgentController<'a, Vec<u8>> {
         let heuristic = Box::new(TestHeuristic::new());
-        let mut ac = super::AgentController::test_new(heuristic, vec![Box::new(TestAction::new())]);
-        ac.on_oom(dummy_jni_env(), 0);
-        ac.on_oom(dummy_jni_env(), 0);
+        super::AgentController::test_new(heuristic, vec![Box::new(TestAction::new())], Vec::new())
     }
 
     fn dummy_jni_env() -> ::env::JniEnv {

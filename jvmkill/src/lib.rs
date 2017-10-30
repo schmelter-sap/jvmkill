@@ -19,6 +19,7 @@
 #![allow(non_snake_case)]
 
 use std::sync::Mutex;
+use std::io::{stderr, Stderr};
 
 #[macro_use]
 mod macros;
@@ -42,7 +43,7 @@ lazy_static! {
 
 #[derive(Default)]
 struct AgentContext<'a> {
-    ac: Option<agentcontroller::controller::AgentController<'a>>
+    ac: Option<agentcontroller::controller::AgentController<'a, Stderr>>
 }
 
 impl<'a> AgentContext<'a> {
@@ -50,7 +51,7 @@ impl<'a> AgentContext<'a> {
         Default::default()
     }
 
-    pub fn set(&mut self, a: agentcontroller::controller::AgentController<'a>) {
+    pub fn set(&mut self, a: agentcontroller::controller::AgentController<'a, Stderr>) {
         self.ac = Some(a);
     }
 
@@ -66,7 +67,7 @@ pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw:
     let jvmti_env = env::JvmTiEnv::new(vm);
 
     if let Err(e) = jvmti_env
-        .and_then(|ti| agentcontroller::controller::AgentController::new(ti, options))
+        .and_then(|ti| agentcontroller::controller::AgentController::new(ti, options, stderr()))
         .map(|ac| STATIC_CONTEXT.lock().expect("static lock was not acquired").set(ac)) {
         return e;
     }
