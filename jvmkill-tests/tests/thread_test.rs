@@ -14,29 +14,41 @@
  * limitations under the License.
  */
 
+#[macro_use]
+extern crate lazy_static;
+use std::sync::Mutex;
 use common::run_java;
 
 mod common;
 
+// Serialise the thread tests to avoid crashing macOS High Sierra
+lazy_static! {
+    static ref THREAD_TEST_MUTEX: Mutex<()> = Mutex::new(());
+}
+
 #[test]
-fn basic() {
+fn thread_basic() {
+    let _g = THREAD_TEST_MUTEX.lock().unwrap();
     assert!(!run_java("org.cloudfoundry.jvmkill.ThreadExhaustion", "", &[], &["Resource exhaustion event: the JVM was unable to create a thread.",
         "ERROR: PoolStats action failed"]));
 }
 
 #[test]
-fn print_memory_usage_0() {
+fn thread_print_memory_usage_0() {
+    let _g = THREAD_TEST_MUTEX.lock().unwrap();
     assert!(!run_java("org.cloudfoundry.jvmkill.ThreadExhaustion", "=printMemoryUsage=0", &[], &["jvmkill killing current process"]));
 }
 
 #[test]
-fn time_10_count_2() {
+fn thread_time_10_count_2() {
+    let _g = THREAD_TEST_MUTEX.lock().unwrap();
     assert!(!run_java("org.cloudfoundry.jvmkill.ThreadExhaustion", "=time=10,count=2,printHeapHistogram=0,printMemoryUsage=0",
                       &[], &["ResourceExhausted! (1/2)", "jvmkill killing current process"]));
 }
 
 #[test]
-fn parallel_time_10_count_2() {
+fn thread_parallel_time_10_count_2() {
+    let _g = THREAD_TEST_MUTEX.lock().unwrap();
     assert!(!run_java("org.cloudfoundry.jvmkill.ParallelThreadExhaustion", "=time=10,count=2,printHeapHistogram=0,printMemoryUsage=0", &[],
                       &["jvmkill killing current process"]));
 }

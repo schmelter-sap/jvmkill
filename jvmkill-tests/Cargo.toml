@@ -17,5 +17,6 @@ name = "jvmkill-tests"
 version = "0.0.0"
 
 [dependencies]
+lazy_static = "*"
 jvmkill = { path = "../jvmkill" }
 resource-exhaustion-generator = { path = "../resource-exhaustion-generator" }
