@@ -17,6 +17,7 @@ name = "jvmkill"
 version = "2.0.0-BUILD-SNAPSHOT"
 authors = [ "Glyn Normington <gnormington@pivotal.io>", "Ben Hale <bhale@pivotal.io>" ]
 description = "JVM resource exhaustion agent"
+license = "Apache-2.0"
 keywords = [ "java", "jvm", "jvmti" ]
 build = "build.rs"
 
