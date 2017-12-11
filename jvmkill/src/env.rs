@@ -16,7 +16,6 @@
 
 use std::mem::size_of;
 use std::mem::transmute;
-use std::os::raw::c_uint;
 use std::ptr;
 use std::ffi::CString;
 use std::ffi::CStr;
@@ -64,7 +63,7 @@ macro_rules! jvmtifn (
             let fnc = (**$r).$f.expect(&format!("{} function not found", stringify!($f)));
             rc = fnc($r, $($arg)*);
         }
-        if rc != ::jvmti::jvmtiError::JVMTI_ERROR_NONE {
+        if rc != ::jvmti::jvmtiError_JVMTI_ERROR_NONE {
             let message = format!("JVMTI {} failed", stringify!($f));
             Err(::err::Error::JvmTi(message, rc as i32))
         } else {
@@ -84,7 +83,7 @@ impl JvmTI for JvmTiEnv {
 
         let callbacks = ::jvmti::jvmtiEventCallbacks { ResourceExhausted: Some(resource_exhausted), ..Default::default() };
         jvmtifn!(self.jvmti, SetEventCallbacks, &callbacks, size_of::<::jvmti::jvmtiEventCallbacks>() as i32)?;
-        jvmtifn!(self.jvmti, SetEventNotificationMode, ::jvmti::jvmtiEventMode::JVMTI_ENABLE, ::jvmti::jvmtiEvent::JVMTI_EVENT_RESOURCE_EXHAUSTED, ::std::ptr::null_mut())?;
+        jvmtifn!(self.jvmti, SetEventNotificationMode, ::jvmti::jvmtiEventMode_JVMTI_ENABLE, ::jvmti::jvmtiEvent_JVMTI_EVENT_RESOURCE_EXHAUSTED, ::std::ptr::null_mut())?;
 
         Ok(())
     }
@@ -241,9 +240,10 @@ impl JniEnv {
 
     // Rust doesn't have variadic functions (except for unsafe FFI bindings).
     pub fn call_object_method_with_int(&mut self, object: ::jvmti::jobject, method_id: ::jvmti::jmethodID, n: ::jvmti::jint) -> Result<::jvmti::jobject, ::err::Error> {
+        let n_value: ::jvmti::jvalue = ::jvmti::jvalue {i: n};
         let result;
         unsafe {
-            result = (**self.jni).CallObjectMethod.expect("CallObjectMethod function not found")(self.jni, object, method_id, n);
+            result = (**self.jni).CallObjectMethodA.expect("CallObjectMethodA function not found")(self.jni, object, method_id, &n_value);
         }
         if self.exception_occurred() || result == ptr::null_mut() {
             let message = format!("call to method_id {:?} on object {:?} with variable argument {} failed", method_id, object, n);
@@ -259,7 +259,8 @@ impl JniEnv {
         let result;
         unsafe {
             let s_jstring = (**self.jni).NewStringUTF.expect("NewStringUTF function not found")(self.jni, s.as_ptr());
-            result = (**self.jni).CallObjectMethod.expect("CallObjectMethod function not found")(self.jni, object, method_id, s_jstring, b as c_uint);
+            let args: [::jvmti::jvalue; 2] = [::jvmti::jvalue {l: s_jstring}, ::jvmti::jvalue {z: b}];
+            result = (**self.jni).CallObjectMethodA.expect("CallObjectMethodA function not found")(self.jni, object, method_id, &args[0]);
         }
         if self.exception_occurred() || result == ptr::null_mut() {
             let message = format!("call to method_id {:?} on object {:?} with variable arguments {:?}, {} failed", method_id, object, s, b);
@@ -285,9 +286,10 @@ impl JniEnv {
     }
 
     pub fn call_static_object_method_with_jclass(&mut self, class: ::jvmti::jclass, method_id: ::jvmti::jmethodID, c: ::jvmti::jclass) -> Result<::jvmti::jobject, ::err::Error> {
+        let c_value: ::jvmti::jvalue = ::jvmti::jvalue {l: c};
         let object;
         unsafe {
-            object = (**self.jni).CallStaticObjectMethod.expect("CallStaticObjectMethod function not found")(self.jni, class, method_id, c);
+            object = (**self.jni).CallStaticObjectMethodA.expect("CallStaticObjectMethodA function not found")(self.jni, class, method_id, &c_value);
         }
         if self.exception_occurred() || object == ptr::null_mut() {
             let message = format!("call to method_id {:?} on class {:?} with variable argument {:?} failed", method_id, class, c);

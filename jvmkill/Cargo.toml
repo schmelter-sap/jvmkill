@@ -33,4 +33,4 @@ lazy_static = "*"
 nix = "*"
 
 [build-dependencies]
-bindgen = "0.24"
+bindgen = "*"
