@@ -37,6 +37,10 @@ To build the agent, install the above pre-requisites, then issue:
 
     cargo build --release -p jvmkill
     
+If the build fails, update the dependencies as follows then try again:
+
+    cargo update
+    
 # Testing
 
 To run the tests, install the above pre-requisites, then issue:
