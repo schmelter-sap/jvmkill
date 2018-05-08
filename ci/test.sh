@@ -7,5 +7,7 @@ set -e -u
 
 PATH=/usr/local/bin:$PATH
 
+/usr/local/bin/cargo --version
+
 cd jvmkill
 /usr/local/bin/cargo test --color=always --all -- --test-threads=1 --nocapture

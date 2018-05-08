@@ -7,6 +7,8 @@ set -e -u
 
 PATH=/usr/local/bin:$PATH
 
+/usr/local/bin/cargo --version
+
 cd jvmkill
 /usr/local/bin/cargo build --color=always --release -p jvmkill
 
