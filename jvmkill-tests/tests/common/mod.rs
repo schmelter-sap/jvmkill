@@ -58,11 +58,14 @@ fn jvmkill_test() -> PathBuf {
 }
 
 fn jvmkill() -> PathBuf {
-    let root = PathBuf::from(env::var("LD_LIBRARY_PATH").or(env::var("DYLD_LIBRARY_PATH")).unwrap().split(":").next().unwrap());
-
-    if cfg!(target_os = "macos") {
-        root.join("libjvmkill.dylib")
+    let lib_name = if cfg!(target_os = "macos") {
+        "libjvmkill.dylib"
     } else {
-        root.join("libjvmkill.so")
-    }
+        "libjvmkill.so"
+    };
+
+    env::var("LD_LIBRARY_PATH").or(env::var("DYLD_LIBRARY_PATH")).unwrap()
+        .split(":")
+        .map(|root| PathBuf::from(root).join(lib_name))
+        .find(|path| path.exists()).unwrap()
 }
