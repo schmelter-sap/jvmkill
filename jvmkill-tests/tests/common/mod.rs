@@ -24,6 +24,7 @@ pub fn run_java(class: &str, arguments: &str, expected_stdout: &[&str], expected
         .arg("-cp").arg(jvmkill_test().to_str().unwrap())
         .arg("-Xmx50m")
         .arg("-XX:ReservedCodeCacheSize=10m")
+        .arg("-XX:-UseCompressedOops")
         .arg(class)
         .output().expect("failed to run Java process");
 
