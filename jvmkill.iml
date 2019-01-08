@@ -10,6 +10,13 @@
       <sourceFolder url="file://$MODULE_DIR$/jvmkill/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/jvmkill-tests/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/jvmkill-tests/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/jvmkill-tests/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/jvmkill-tests/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/jvmkill/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/jvmkill/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/jvmkill/benches" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/jvmkill-tests/target" />
+      <excludeFolder url="file://$MODULE_DIR$/jvmkill/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
