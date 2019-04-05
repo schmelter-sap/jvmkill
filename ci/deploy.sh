@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e -u
+set -euo pipefail
 
 [[ -d $PWD/cargo && ! -d $HOME/.cargo ]] && ln -s $PWD/cargo $HOME/.cargo
 [[ -d $PWD/maven && ! -d $HOME/.m2 ]] && ln -s $PWD/maven $HOME/.m2
