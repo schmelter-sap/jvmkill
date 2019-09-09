@@ -25,28 +25,27 @@ motivated the development of this agent.
 
 Install [Rust][] v1.19.0 or later.
 
-Ensure that you have libclang v3.9 or later installed. To install this on Ubuntu Trusty see [ask ubuntu][]
-and set `$LIBCLANG_PATH` to the directory containing (v3.9 or later of) `libclang.so` and `libclang.so.1`.
+Ensure that you have libclang v3.9 or later installed.
 
 [Rust]: https://www.rust-lang.org/en-US/install.html
 [ask ubuntu]: https://askubuntu.com/questions/787383/how-to-install-llvm-3-9
-    
+
 # Building
 
 To build the agent, install the above pre-requisites, then issue:
 
     cargo build --release -p jvmkill
-    
+
 If the build fails, update the dependencies as follows then try again:
 
     cargo update
-    
+
 # Testing
 
 To run the tests, install the above pre-requisites, then issue:
 
     cargo test --all
-    
+
 # Usage
 
 Run Java with the agent added as a JVM argument:
@@ -69,7 +68,7 @@ time interval. Defaults to 0 if not provided (JVM is killed with a single fired 
 
 ## time
 
-Configures the time limit (in seconds) in which resourceExhausted events are kept in 
+Configures the time limit (in seconds) in which resourceExhausted events are kept in
 the counter. Defaults to 1 if not provided.
 
 ## heapDumpPath
@@ -85,7 +84,7 @@ although the precise set of format codes supported depends on the platform.
 For example, the string "%a-%d-%b-%Y-%T-%z" approximates the date format of RFC 2822 while avoiding embedded spaces
 (which are awkward in agent parameters).
 
-A heap dump (of live objects only) is generated if a path is specified _and_ the 
+A heap dump (of live objects only) is generated if a path is specified _and_ the
 [HotSpot Diagnostic MXBean](https://docs.oracle.com/javase/8/docs/jre/api/management/extension/com/sun/management/HotSpotDiagnosticMXBean.html)
 is available.
 If the parent directories of the path do not exist, they are created.
@@ -104,7 +103,7 @@ total number of bytes in the heap consumed by those instances, and the name of t
 The histogram is sorted in order of decreasing total number of bytes.
 
 The histogram may be truncated. To set the number of entries that appear, use the `heapHistogramMaxEntries` parameter.
- 
+
 ## heapHistogramMaxEntries
 
 When histogram printing is enabled, limits the number of entries in the histogram to the value
