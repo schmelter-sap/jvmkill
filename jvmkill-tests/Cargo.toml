@@ -16,8 +16,8 @@
 name = "jvmkill-tests"
 version = "0.0.0"
 license = "Apache-2.0"
+edition = "2018"
 
-[dependencies]
-lazy_static = "*"
+[dev-dependencies]
 jvmkill = { path = "../jvmkill" }
 resource-exhaustion-generator = { path = "../resource-exhaustion-generator" }
