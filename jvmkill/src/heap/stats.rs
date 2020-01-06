@@ -23,7 +23,7 @@ pub trait Record {
 }
 
 pub trait Print {
-    fn print(&self, writer: &mut Write);
+    fn print(&self, writer: &mut dyn Write);
 }
 
 #[derive(Default)]
@@ -47,7 +47,7 @@ impl Stats {
 }
 
 impl Print for Stats {
-    fn print(&self, writer: &mut Write) {
+    fn print(&self, writer: &mut dyn Write) {
         let mut results: Vec<(&String, &ObjectStats)> = self.java_objects.iter().collect();
         results.sort_by(|&(_, s1), &(_, s2)| s2.total_size.cmp(&s1.total_size));
 

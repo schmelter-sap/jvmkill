@@ -25,7 +25,7 @@ use ::heap::tagger::Tag;
 pub trait JvmTI {
     fn on_resource_exhausted(&mut self, callback: FnResourceExhausted) -> Result<(), ::err::Error>;
     fn enable_object_tagging(&mut self) -> Result<(), ::err::Error>;
-    fn tag_loaded_classes(&self, tagger: &mut Tag) -> Result<(), ::err::Error>;
+    fn tag_loaded_classes(&self, tagger: &mut dyn Tag) -> Result<(), ::err::Error>;
 
     // Restriction: traverse_live_heap may be called at most once in the lifetime of a JVM.
     fn traverse_live_heap<F>(&self, closure: F) -> Result<(), ::err::Error> where F: FnMut(::jvmti::jlong, ::jvmti::jlong);
@@ -100,7 +100,7 @@ impl JvmTI for JvmTiEnv {
         Ok(())
     }
 
-    fn tag_loaded_classes(&self, tagger: &mut Tag) -> Result<(), ::err::Error> {
+    fn tag_loaded_classes(&self, tagger: &mut dyn Tag) -> Result<(), ::err::Error> {
         let mut class_count = 0;
         let mut class_ptr = ::std::ptr::null_mut();
         jvmtifn!(self.jvmti, GetLoadedClasses, &mut class_count, &mut class_ptr)?;
@@ -130,7 +130,7 @@ impl JvmTI for JvmTiEnv {
         };
         // Pass closure to the callback as a thin pointer pointing to a fat pointer pointing to the closure.
         // See: https://stackoverflow.com/questions/38995701/how-do-i-pass-closures-through-raw-pointers-as-arguments-to-c-functions
-        let mut closure_ptr: &mut FnMut(::jvmti::jlong, ::jvmti::jlong) = &mut closure;
+        let mut closure_ptr: &mut dyn FnMut(::jvmti::jlong, ::jvmti::jlong) = &mut closure;
         let closure_ptr_ptr = unsafe { transmute(&mut closure_ptr) };
 
         // Need to pass the traversal state into FollowReferences and pick it up in the callback, which may be called multiple times
@@ -187,7 +187,7 @@ unsafe extern "C" fn heapReferenceCallback(reference_kind: ::jvmti::jvmtiHeapRef
 
     // Add the object to the heap stats along with its class signature.
     let unmaskedClassTag = class_tag & !TAG_VISITED_MASK;
-    let closure: &mut &mut FnMut(::jvmti::jlong, ::jvmti::jlong) -> ::jvmti::jint = transmute(user_data);
+    let closure: &mut &mut dyn FnMut(::jvmti::jlong, ::jvmti::jlong) -> ::jvmti::jint = transmute(user_data);
     closure(unmaskedClassTag, size);
 
     ::jvmti::JVMTI_VISIT_OBJECTS as ::jvmti::jint
