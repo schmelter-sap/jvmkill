@@ -43,7 +43,7 @@ impl<T: JvmTI + Clone> HeapHistogram<T> {
         })
     }
 
-    fn print(&self, writer: &mut Write) -> Result<(), ::err::Error> {
+    fn print(&self, writer: &mut dyn Write) -> Result<(), ::err::Error> {
         let mut tagger = Tagger::new();
 
         // Tag all loaded classes so we can determine each object's class signature during heap traversal.

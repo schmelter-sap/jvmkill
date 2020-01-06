@@ -31,7 +31,7 @@ impl PoolStats {
         }
     }
 
-    fn print_stats(&self, name: String, stats: Stats, output: &mut Write) {
+    fn print_stats(&self, name: String, stats: Stats, output: &mut dyn Write) {
         let (stats_line, pool_nearly_full) = usage_stats(stats);
         writeln_paced!(output, "   {}: {}", name, stats_line);
         if pool_nearly_full {

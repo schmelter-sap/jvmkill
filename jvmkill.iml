@@ -15,8 +15,13 @@
       <sourceFolder url="file://$MODULE_DIR$/jvmkill/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/jvmkill/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/jvmkill/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/resource-exhaustion-generator/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/resource-exhaustion-generator/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/resource-exhaustion-generator/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/resource-exhaustion-generator/benches" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/jvmkill-tests/target" />
       <excludeFolder url="file://$MODULE_DIR$/jvmkill/target" />
+      <excludeFolder url="file://$MODULE_DIR$/resource-exhaustion-generator/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

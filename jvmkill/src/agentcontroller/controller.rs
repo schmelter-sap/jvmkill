@@ -18,8 +18,8 @@ use libc::SIGQUIT;
 use std::io::Write;
 
 pub struct AgentController<'a, T: Write> {
-    heuristic: Box<super::Heuristic + 'a>,
-    actions: Vec<Box<super::Action>>,
+    heuristic: Box<dyn super::Heuristic + 'a>,
+    actions: Vec<Box<dyn super::Action>>,
     log: T
 }
 
