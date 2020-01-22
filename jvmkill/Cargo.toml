@@ -19,18 +19,21 @@ authors = [ "Glyn Normington <gnormington@pivotal.io>", "Ben Hale <bhale@pivotal
 description = "JVM resource exhaustion agent"
 license = "Apache-2.0"
 keywords = [ "java", "jvm", "jvmti" ]
+edition = "2018"
 build = "build.rs"
 
 [lib]
 crate_type = [ "cdylib" ]
 
 [dependencies]
+circular-queue = "*"
 libc = "*"
-time = "0.1.*"
-lazy_static = "*"
+mockall = { git = "https://github.com/asomers/mockall", branch = "master" } # TODO: Use released version
+regex = "*"
+time = "*"
 
 [dev-dependencies]
-nix = "*"
+tempdir = "*"
 
 [build-dependencies]
 bindgen = "*"

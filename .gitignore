@@ -1,6 +1,5 @@
-**/*.rs.bk
 .idea/libraries
 .idea/tasks.xml
 .idea/workspace.xml
-Cargo.lock
+jvmkill/src/bindings.rs
 target/

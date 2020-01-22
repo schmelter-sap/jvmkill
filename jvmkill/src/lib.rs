@@ -14,74 +14,62 @@
  * limitations under the License.
  */
 
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-
+use std::os::raw::{c_char, c_void};
+use std::ptr;
 use std::sync::Mutex;
-use std::io::{stderr, Stderr};
 
-#[macro_use]
-mod macros;
-mod env;
-mod err;
+use crate::action::Actions;
+use crate::bindings::{JavaVM, jint, JNIEnv, jvmtiEnv, jvmtiEvent_JVMTI_EVENT_RESOURCE_EXHAUSTED, jvmtiEventCallbacks, jvmtiEventMode_JVMTI_ENABLE};
+use crate::context::Context;
+use crate::jmx::ManagementFactory;
+use crate::jni::DefaultJNI;
+use crate::jvmti::{DefaultJVMTI, JVMTI};
+
+#[cfg_attr(test, macro_use)]
+mod test_macros;
+
+mod action;
+mod context;
 mod heap;
+mod jmx;
+mod jni;
 mod jvmti;
-mod agentcontroller;
 
-use env::JvmTI;
-use agentcontroller::MutAction;
-
-#[macro_use]
-extern crate lazy_static;
-extern crate libc;
-extern crate time;
-
-lazy_static! {
-    static ref STATIC_CONTEXT: Mutex<AgentContext<'static>> = Mutex::new(AgentContext::new());
+mod bindings {
+    #![allow(dead_code, non_camel_case_types, non_snake_case, non_upper_case_globals)]
+    include!("bindings.rs");
 }
 
-#[derive(Default)]
-struct AgentContext<'a> {
-    ac: Option<agentcontroller::controller::AgentController<'a, Stderr>>
-}
-
-impl<'a> AgentContext<'a> {
-    pub fn new() -> Self {
-        Default::default()
-    }
-
-    pub fn set(&mut self, a: agentcontroller::controller::AgentController<'a, Stderr>) {
-        self.ac = Some(a);
-    }
-
-    pub fn on_oom(&mut self, jni_env: ::env::JniEnv, resource_exhaustion_flags: ::jvmti::jint) {
-        self.ac.as_mut().map(|a| a.on_oom(jni_env, resource_exhaustion_flags));
-    }
-}
+static mut CONTEXT: Option<Mutex<Context>> = None;
 
 #[no_mangle]
-#[allow(unused_variables)]
-pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw::c_char,
-                           reserved: *mut ::std::os::raw::c_void) -> jvmti::jint {
-    let jvmti_env = env::JvmTiEnv::new(vm);
+#[allow(non_snake_case)]
+pub extern "C" fn Agent_OnLoad(vm: *mut JavaVM, options: *mut c_char, _reserved: *mut c_void) -> jint {
+    Some(Mutex::new(Context::new(options)));
 
-    if let Err(e) = jvmti_env
-        .and_then(|ti| agentcontroller::controller::AgentController::new(ti, options, stderr()))
-        .map(|ac| STATIC_CONTEXT.lock().expect("static lock was not acquired").set(ac)) {
-        return e;
+    unsafe {
+        CONTEXT = Some(Mutex::new(Context::new(options)))
     }
 
-    if let Err(e) = jvmti_env
-        .and_then(|mut ti| {
-            ti.on_resource_exhausted(resource_exhausted).map_err(|err| err.rc())
-        }) {
-        return e;
-    }
+    let j = DefaultJVMTI::from(vm);
+    j.set_event_notification_mode(jvmtiEventMode_JVMTI_ENABLE, jvmtiEvent_JVMTI_EVENT_RESOURCE_EXHAUSTED, ptr::null_mut());
+    j.set_event_callbacks(&jvmtiEventCallbacks { ResourceExhausted: Some(resource_exhausted), ..Default::default() });
 
-    0
+    return 0;
 }
 
-fn resource_exhausted(_: env::JvmTiEnv, jni_env: env::JniEnv, flags: ::jvmti::jint) {
-    STATIC_CONTEXT.lock().expect("static lock was not acquired").on_oom(jni_env, flags);
+unsafe extern "C" fn resource_exhausted(jvmti_env: *mut jvmtiEnv, jni_env: *mut JNIEnv, flags: jint, _reserved: *const c_void, _description: *const c_char) {
+    match &CONTEXT {
+        None => panic!("context not yet set"),
+        Some(m) => {
+            let mut c = m.lock().unwrap();
+            if c.record() {
+                let jvmti = DefaultJVMTI::new(jvmti_env);
+                let jni = DefaultJNI::new(jni_env);
+                let factory = ManagementFactory::new(&jni);
+
+                Actions::new(&c.parameters, &jvmti, &factory).execute(flags);
+            }
+        }
+    }
 }

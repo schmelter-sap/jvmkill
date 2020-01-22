@@ -14,10 +14,15 @@
  * limitations under the License.
  */
 
-pub use class_formatter::ClassFormatter;
-pub use contents::Contents;
-pub use types::Types;
+pub use hotspot_diagnostic_mxbean::HotspotDiagnosticMXBean;
+pub use management_factory::ManagementFactory;
+pub use memory_mxbean::MemoryMXBean;
+pub use memory_pool_mxbean::MemoryPoolMXBean;
+pub use memory_usage::MemoryUsage;
 
-mod class_formatter;
-mod contents;
-mod types;
+mod hotspot_diagnostic_mxbean;
+mod management_factory;
+mod memory_mxbean;
+mod memory_pool_mxbean;
+mod memory_usage;
+

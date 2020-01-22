@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 the original author or authors.
+ * Copyright 2015-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,22 @@
  * limitations under the License.
  */
 
-// writeln_paced is similar to writeln except it reduces the risk of loggregator missing some entries
-// by sleeping before each write. Also, it panics if the underlying writeln fails.
-macro_rules! writeln_paced (
-    ($($arg:tt)*) => { {
-        use std::{thread, time};
-        #[allow(unused_imports)]
-        use std::io::Write;
+macro_rules! jni_type {
+    ($size:literal, $type:ty) => {
+        unsafe { libc::malloc($size * std::mem::size_of::<$type>() as libc::size_t) } as $type
+    };
 
-        thread::sleep(time::Duration::from_millis(1));
+    ($type:ty) => {
+        jni_type!(1, $type)
+    };
+}
 
-        writeln!($($arg)*).expect("write failed");
-    } }
-);
+macro_rules! jni_type_const {
+    ($size:literal, $type:ty) => {
+        unsafe { libc::malloc($size * std::mem::size_of::<$type>() as libc::size_t) } as *const $type
+    };
+
+    ($type:ty) => {
+        jni_type_const!(1, $type)
+    };
+}

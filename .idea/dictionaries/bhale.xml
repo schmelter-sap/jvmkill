@@ -4,6 +4,8 @@
       <w>dbuild</w>
       <w>dyld</w>
       <w>libjvmkill</w>
+      <w>mxbean</w>
+      <w>mxbeans</w>
       <w>spawner</w>
     </words>
   </dictionary>
