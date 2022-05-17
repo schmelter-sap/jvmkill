@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-use heap::tagger::Tag;
-use jvmti::jvmtiEnv;
+use crate::heap::tagger::Tag;
+use crate::jvmti::jvmtiEnv;
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::mem::size_of;
@@ -23,14 +23,14 @@ use std::mem::transmute;
 use std::ptr;
 
 pub trait JvmTI {
-    fn on_resource_exhausted(&mut self, callback: FnResourceExhausted) -> Result<(), ::err::Error>;
-    fn enable_object_tagging(&mut self) -> Result<(), ::err::Error>;
-    fn tag_loaded_classes(&self, tagger: &mut dyn Tag) -> Result<(), ::err::Error>;
+    fn on_resource_exhausted(&mut self, callback: FnResourceExhausted) -> Result<(), crate::err::Error>;
+    fn enable_object_tagging(&mut self) -> Result<(), crate::err::Error>;
+    fn tag_loaded_classes(&self, tagger: &mut dyn Tag) -> Result<(), crate::err::Error>;
 
     // Restriction: traverse_live_heap may be called at most once in the lifetime of a JVM.
-    fn traverse_live_heap<F>(&self, closure: F) -> Result<(), ::err::Error>
+    fn traverse_live_heap<F>(&self, closure: F) -> Result<(), crate::err::Error>
     where
-        F: FnMut(::jvmti::jlong, ::jvmti::jlong);
+        F: FnMut(crate::jvmti::jlong, crate::jvmti::jlong);
 }
 
 #[derive(Clone, Copy)]
@@ -39,19 +39,19 @@ pub struct JvmTiEnv {
 }
 
 impl JvmTiEnv {
-    pub fn new(vm: *mut ::jvmti::JavaVM) -> Result<JvmTiEnv, ::jvmti::jint> {
+    pub fn new(vm: *mut crate::jvmti::JavaVM) -> Result<JvmTiEnv, crate::jvmti::jint> {
         let mut penv: *mut ::std::os::raw::c_void = ptr::null_mut();
         let rc;
         unsafe {
             rc = (**vm).GetEnv.expect("GetEnv function not found")(
                 vm,
                 &mut penv,
-                ::jvmti::JVMTI_VERSION as i32,
+                crate::jvmti::JVMTI_VERSION as i32,
             );
         }
-        if rc as u32 != ::jvmti::JNI_OK {
+        if rc as u32 != crate::jvmti::JNI_OK {
             eprintln!("ERROR: GetEnv failed: {}", rc);
-            return Err(::jvmti::JNI_ERR);
+            return Err(crate::jvmti::JNI_ERR);
         }
         Ok(JvmTiEnv {
             jvmti: penv as *mut jvmtiEnv,
@@ -71,9 +71,9 @@ macro_rules! jvmtifn (
             let fnc = (**$r).$f.expect(&format!("{} function not found", stringify!($f)));
             rc = fnc($r, $($arg)*);
         }
-        if rc != ::jvmti::jvmtiError_JVMTI_ERROR_NONE {
+        if rc != crate::jvmti::jvmtiError_JVMTI_ERROR_NONE {
             let message = format!("JVMTI {} failed", stringify!($f));
-            Err(::err::Error::JvmTi(message, rc as i32))
+            Err(crate::err::Error::JvmTi(message, rc as i32))
         } else {
             Ok(())
         }
@@ -81,15 +81,15 @@ macro_rules! jvmtifn (
 );
 
 // Pick a suitable object tag mask greater than tags used to tag classes.
-const TAG_VISITED_MASK: ::jvmti::jlong = 1 << 31;
+const TAG_VISITED_MASK: crate::jvmti::jlong = 1 << 31;
 
 impl JvmTI for JvmTiEnv {
-    fn on_resource_exhausted(&mut self, callback: FnResourceExhausted) -> Result<(), ::err::Error> {
+    fn on_resource_exhausted(&mut self, callback: FnResourceExhausted) -> Result<(), crate::err::Error> {
         unsafe {
             EVENT_CALLBACKS.resource_exhausted = Some(callback);
         }
 
-        let callbacks = ::jvmti::jvmtiEventCallbacks {
+        let callbacks = crate::jvmti::jvmtiEventCallbacks {
             ResourceExhausted: Some(resource_exhausted),
             ..Default::default()
         };
@@ -97,21 +97,21 @@ impl JvmTI for JvmTiEnv {
             self.jvmti,
             SetEventCallbacks,
             &callbacks,
-            size_of::<::jvmti::jvmtiEventCallbacks>() as i32
+            size_of::<crate::jvmti::jvmtiEventCallbacks>() as i32
         )?;
         jvmtifn!(
             self.jvmti,
             SetEventNotificationMode,
-            ::jvmti::jvmtiEventMode_JVMTI_ENABLE,
-            ::jvmti::jvmtiEvent_JVMTI_EVENT_RESOURCE_EXHAUSTED,
+            crate::jvmti::jvmtiEventMode_JVMTI_ENABLE,
+            crate::jvmti::jvmtiEvent_JVMTI_EVENT_RESOURCE_EXHAUSTED,
             ::std::ptr::null_mut()
         )?;
 
         Ok(())
     }
 
-    fn enable_object_tagging(&mut self) -> Result<(), ::err::Error> {
-        let mut capabilities: ::jvmti::jvmtiCapabilities = Default::default();
+    fn enable_object_tagging(&mut self) -> Result<(), crate::err::Error> {
+        let mut capabilities: crate::jvmti::jvmtiCapabilities = Default::default();
 
         jvmtifn!(self.jvmti, GetCapabilities, &mut capabilities)?;
 
@@ -122,7 +122,7 @@ impl JvmTI for JvmTiEnv {
         Ok(())
     }
 
-    fn tag_loaded_classes(&self, tagger: &mut dyn Tag) -> Result<(), ::err::Error> {
+    fn tag_loaded_classes(&self, tagger: &mut dyn Tag) -> Result<(), crate::err::Error> {
         let mut class_count = 0;
         let mut class_ptr = ::std::ptr::null_mut();
         jvmtifn!(
@@ -157,17 +157,17 @@ impl JvmTI for JvmTiEnv {
         Ok(())
     }
 
-    fn traverse_live_heap<F>(&self, mut closure: F) -> Result<(), ::err::Error>
+    fn traverse_live_heap<F>(&self, mut closure: F) -> Result<(), crate::err::Error>
     where
-        F: FnMut(::jvmti::jlong, ::jvmti::jlong),
+        F: FnMut(crate::jvmti::jlong, crate::jvmti::jlong),
     {
-        let callbacks = ::jvmti::jvmtiHeapCallbacks {
+        let callbacks = crate::jvmti::jvmtiHeapCallbacks {
             heap_reference_callback: Some(heapReferenceCallback),
             ..Default::default()
         };
         // Pass closure to the callback as a thin pointer pointing to a fat pointer pointing to the closure.
         // See: https://stackoverflow.com/questions/38995701/how-do-i-pass-closures-through-raw-pointers-as-arguments-to-c-functions
-        let mut closure_ptr: &mut dyn FnMut(::jvmti::jlong, ::jvmti::jlong) = &mut closure;
+        let mut closure_ptr: &mut dyn FnMut(crate::jvmti::jlong, crate::jvmti::jlong) = &mut closure;
         let closure_ptr_ptr = unsafe { transmute(&mut closure_ptr) };
 
         // Need to pass the traversal state into FollowReferences and pick it up in the callback, which may be called multiple times
@@ -187,9 +187,9 @@ impl JvmTI for JvmTiEnv {
 
 #[allow(unused_variables)]
 unsafe extern "C" fn resource_exhausted(
-    jvmti_env: *mut ::jvmti::jvmtiEnv,
-    jni_env: *mut ::jvmti::JNIEnv,
-    flags: ::jvmti::jint,
+    jvmti_env: *mut crate::jvmti::jvmtiEnv,
+    jni_env: *mut crate::jvmti::JNIEnv,
+    flags: crate::jvmti::jint,
     reserved: *const ::std::os::raw::c_void,
     description: *const ::std::os::raw::c_char,
 ) {
@@ -202,7 +202,7 @@ unsafe extern "C" fn resource_exhausted(
     }
 }
 
-pub type FnResourceExhausted = fn(jvmti_env: JvmTiEnv, jni_env: JniEnv, flags: ::jvmti::jint);
+pub type FnResourceExhausted = fn(jvmti_env: JvmTiEnv, jni_env: JniEnv, flags: crate::jvmti::jint);
 
 #[derive(Default, Clone)]
 pub struct EventCallbacks {
@@ -215,16 +215,16 @@ pub static mut EVENT_CALLBACKS: EventCallbacks = EventCallbacks {
 
 #[allow(unused_variables)]
 unsafe extern "C" fn heapReferenceCallback(
-    reference_kind: ::jvmti::jvmtiHeapReferenceKind,
-    reference_info: *const ::jvmti::jvmtiHeapReferenceInfo,
-    class_tag: ::jvmti::jlong,
-    referrer_class_tag: ::jvmti::jlong,
-    size: ::jvmti::jlong,
-    tag_ptr: *mut ::jvmti::jlong,
-    referrer_tag_ptr: *mut ::jvmti::jlong,
-    length: ::jvmti::jint,
+    reference_kind: crate::jvmti::jvmtiHeapReferenceKind,
+    reference_info: *const crate::jvmti::jvmtiHeapReferenceInfo,
+    class_tag: crate::jvmti::jlong,
+    referrer_class_tag: crate::jvmti::jlong,
+    size: crate::jvmti::jlong,
+    tag_ptr: *mut crate::jvmti::jlong,
+    referrer_tag_ptr: *mut crate::jvmti::jlong,
+    length: crate::jvmti::jint,
     user_data: *mut ::std::os::raw::c_void,
-) -> ::jvmti::jint {
+) -> crate::jvmti::jint {
     if *tag_ptr & TAG_VISITED_MASK == TAG_VISITED_MASK {
         return 0;
     }
@@ -236,27 +236,27 @@ unsafe extern "C" fn heapReferenceCallback(
     // Add the object to the heap stats along with its class signature.
     let unmaskedClassTag = class_tag & !TAG_VISITED_MASK;
     let closure =
-        &mut *(user_data as *mut &mut dyn FnMut(::jvmti::jlong, ::jvmti::jlong) -> ::jvmti::jint);
+        &mut *(user_data as *mut &mut dyn FnMut(crate::jvmti::jlong, crate::jvmti::jlong) -> crate::jvmti::jint);
     closure(unmaskedClassTag, size);
 
-    ::jvmti::JVMTI_VISIT_OBJECTS as ::jvmti::jint
+    crate::jvmti::JVMTI_VISIT_OBJECTS as crate::jvmti::jint
 }
 
 #[derive(Clone, Copy)]
 pub struct JniEnv {
-    jni: *mut ::jvmti::JNIEnv,
+    jni: *mut crate::jvmti::JNIEnv,
 }
 
 impl JniEnv {
-    pub fn new(jni_env: *mut ::jvmti::JNIEnv) -> JniEnv {
+    pub fn new(jni_env: *mut crate::jvmti::JNIEnv) -> JniEnv {
         JniEnv { jni: jni_env }
     }
 
     pub fn call_int_method(
         &mut self,
-        object: ::jvmti::jobject,
-        method_id: ::jvmti::jmethodID,
-    ) -> ::jvmti::jint {
+        object: crate::jvmti::jobject,
+        method_id: crate::jvmti::jmethodID,
+    ) -> crate::jvmti::jint {
         unsafe {
             (**self.jni)
                 .CallIntMethod
@@ -266,9 +266,9 @@ impl JniEnv {
 
     pub fn call_long_method(
         &mut self,
-        object: ::jvmti::jobject,
-        method_id: ::jvmti::jmethodID,
-    ) -> ::jvmti::jlong {
+        object: crate::jvmti::jobject,
+        method_id: crate::jvmti::jmethodID,
+    ) -> crate::jvmti::jlong {
         unsafe {
             (**self.jni)
                 .CallLongMethod
@@ -278,9 +278,9 @@ impl JniEnv {
 
     pub fn call_object_method(
         &mut self,
-        object: ::jvmti::jobject,
-        method_id: ::jvmti::jmethodID,
-    ) -> Result<::jvmti::jobject, ::err::Error> {
+        object: crate::jvmti::jobject,
+        method_id: crate::jvmti::jmethodID,
+    ) -> Result<crate::jvmti::jobject, crate::err::Error> {
         let result = self.call_object_method_internal(object, method_id);
         if self.exception_occurred() || result == None {
             let message = format!(
@@ -288,7 +288,7 @@ impl JniEnv {
                 method_id, object
             );
             self.diagnose_exception(&message)?;
-            return Err(::err::Error::Jni(message));
+            return Err(crate::err::Error::Jni(message));
         }
 
         Ok(result.expect("unexpected error"))
@@ -296,9 +296,9 @@ impl JniEnv {
 
     pub fn call_object_method_internal(
         &mut self,
-        object: ::jvmti::jobject,
-        method_id: ::jvmti::jmethodID,
-    ) -> Option<::jvmti::jobject> {
+        object: crate::jvmti::jobject,
+        method_id: crate::jvmti::jmethodID,
+    ) -> Option<crate::jvmti::jobject> {
         let result;
         unsafe {
             result = (**self.jni)
@@ -317,11 +317,11 @@ impl JniEnv {
     // Rust doesn't have variadic functions (except for unsafe FFI bindings).
     pub fn call_object_method_with_int(
         &mut self,
-        object: ::jvmti::jobject,
-        method_id: ::jvmti::jmethodID,
-        n: ::jvmti::jint,
-    ) -> Result<::jvmti::jobject, ::err::Error> {
-        let n_value: ::jvmti::jvalue = ::jvmti::jvalue { i: n };
+        object: crate::jvmti::jobject,
+        method_id: crate::jvmti::jmethodID,
+        n: crate::jvmti::jint,
+    ) -> Result<crate::jvmti::jobject, crate::err::Error> {
+        let n_value: crate::jvmti::jvalue = crate::jvmti::jvalue { i: n };
         let result;
         unsafe {
             result = (**self.jni)
@@ -336,7 +336,7 @@ impl JniEnv {
                 method_id, object, n
             );
             self.diagnose_exception(&message)?;
-            Err(::err::Error::Jni(message))
+            Err(crate::err::Error::Jni(message))
         } else {
             Ok(result)
         }
@@ -345,19 +345,19 @@ impl JniEnv {
     // Rust doesn't have variadic functions (except for unsafe FFI bindings).
     pub fn call_object_method_with_cstring_jboolean(
         &mut self,
-        object: ::jvmti::jobject,
-        method_id: ::jvmti::jmethodID,
+        object: crate::jvmti::jobject,
+        method_id: crate::jvmti::jmethodID,
         s: CString,
-        b: ::jvmti::jboolean,
-    ) -> Result<::jvmti::jobject, ::err::Error> {
+        b: crate::jvmti::jboolean,
+    ) -> Result<crate::jvmti::jobject, crate::err::Error> {
         let result;
         unsafe {
             let s_jstring =
                 (**self.jni)
                     .NewStringUTF
                     .expect("NewStringUTF function not found")(self.jni, s.as_ptr());
-            let args: [::jvmti::jvalue; 2] =
-                [::jvmti::jvalue { l: s_jstring }, ::jvmti::jvalue { z: b }];
+            let args: [crate::jvmti::jvalue; 2] =
+                [crate::jvmti::jvalue { l: s_jstring }, crate::jvmti::jvalue { z: b }];
             result = (**self.jni)
                 .CallObjectMethodA
                 .expect("CallObjectMethodA function not found")(
@@ -370,7 +370,7 @@ impl JniEnv {
                 method_id, object, s, b
             );
             self.diagnose_exception(&message)?;
-            Err(::err::Error::Jni(message))
+            Err(crate::err::Error::Jni(message))
         } else {
             Ok(result)
         }
@@ -378,9 +378,9 @@ impl JniEnv {
 
     pub fn call_static_object_method(
         &mut self,
-        class: ::jvmti::jclass,
-        method_id: ::jvmti::jmethodID,
-    ) -> Result<::jvmti::jobject, ::err::Error> {
+        class: crate::jvmti::jclass,
+        method_id: crate::jvmti::jmethodID,
+    ) -> Result<crate::jvmti::jobject, crate::err::Error> {
         let object;
         unsafe {
             object = (**self.jni)
@@ -395,7 +395,7 @@ impl JniEnv {
                 method_id, class
             );
             self.diagnose_exception(&message)?;
-            Err(::err::Error::Jni(message))
+            Err(crate::err::Error::Jni(message))
         } else {
             Ok(object)
         }
@@ -403,11 +403,11 @@ impl JniEnv {
 
     pub fn call_static_object_method_with_jclass(
         &mut self,
-        class: ::jvmti::jclass,
-        method_id: ::jvmti::jmethodID,
-        c: ::jvmti::jclass,
-    ) -> Result<::jvmti::jobject, ::err::Error> {
-        let c_value: ::jvmti::jvalue = ::jvmti::jvalue { l: c };
+        class: crate::jvmti::jclass,
+        method_id: crate::jvmti::jmethodID,
+        c: crate::jvmti::jclass,
+    ) -> Result<crate::jvmti::jobject, crate::err::Error> {
+        let c_value: crate::jvmti::jvalue = crate::jvmti::jvalue { l: c };
         let object;
         unsafe {
             object = (**self.jni)
@@ -422,13 +422,13 @@ impl JniEnv {
                 method_id, class, c
             );
             self.diagnose_exception(&message)?;
-            Err(::err::Error::Jni(message))
+            Err(crate::err::Error::Jni(message))
         } else {
             Ok(object)
         }
     }
 
-    pub fn diagnose_exception(&mut self, message: &str) -> Result<(), ::err::Error> {
+    pub fn diagnose_exception(&mut self, message: &str) -> Result<(), crate::err::Error> {
         if !self.exception_occurred() {
             return Ok(());
         }
@@ -446,10 +446,10 @@ impl JniEnv {
             .expect("exception getMessage method not found");
         let exc_message =
             self.call_object_method_internal(exc, get_message_method_id)
-                .expect("Failed to get exception message") as ::jvmti::jstring;
+                .expect("Failed to get exception message") as crate::jvmti::jstring;
 
         let (exc_message_utf_chars, exc_message_cstr) = self.get_string_utf_chars(exc_message);
-        let err = Err(::err::Error::Jni(format!(
+        let err = Err(crate::err::Error::Jni(format!(
             "{}: {}",
             message,
             exc_message_cstr.to_string_lossy().into_owned()
@@ -468,11 +468,11 @@ impl JniEnv {
             (**self.jni)
                 .ExceptionCheck
                 .expect("ExceptionCheck function not found")(self.jni)
-                == ::jvmti::JNI_TRUE as u8
+                == crate::jvmti::JNI_TRUE as u8
         }
     }
 
-    pub fn find_class(&mut self, class_name: &str) -> Result<::jvmti::jclass, ::err::Error> {
+    pub fn find_class(&mut self, class_name: &str) -> Result<crate::jvmti::jclass, crate::err::Error> {
         let class_name_cstr = CString::new(class_name).expect("invalid class name");
         let class;
 
@@ -487,7 +487,7 @@ impl JniEnv {
         if self.exception_occurred() || class.is_null() {
             let message = format!("{} class not found", class_name);
             self.diagnose_exception(&message)?;
-            Err(::err::Error::Jni(message))
+            Err(crate::err::Error::Jni(message))
         } else {
             Ok(class)
         }
@@ -495,15 +495,15 @@ impl JniEnv {
 
     pub fn get_method_id(
         &mut self,
-        class: ::jvmti::jclass,
+        class: crate::jvmti::jclass,
         method: &str,
         signature: &str,
-    ) -> Result<::jvmti::jmethodID, ::err::Error> {
+    ) -> Result<crate::jvmti::jmethodID, crate::err::Error> {
         let method_id = self.get_method_id_internal(class, method, signature);
         if self.exception_occurred() || method_id == None {
             let message = format!("{} method with signature {} not found", method, signature);
             self.diagnose_exception(&message)?;
-            return Err(::err::Error::Jni(message));
+            return Err(crate::err::Error::Jni(message));
         }
 
         Ok(method_id.expect("unexpected error"))
@@ -511,10 +511,10 @@ impl JniEnv {
 
     fn get_method_id_internal(
         &mut self,
-        class: ::jvmti::jclass,
+        class: crate::jvmti::jclass,
         method: &str,
         signature: &str,
-    ) -> Option<::jvmti::jmethodID> {
+    ) -> Option<crate::jvmti::jmethodID> {
         let method_name = CString::new(method).expect("invalid method name");
         let sig_name = CString::new(signature).expect("invalid method signature");
         let method_id;
@@ -537,19 +537,19 @@ impl JniEnv {
 
     pub fn get_object_class(
         &mut self,
-        object: ::jvmti::jobject,
-    ) -> Result<::jvmti::jclass, ::err::Error> {
+        object: crate::jvmti::jobject,
+    ) -> Result<crate::jvmti::jclass, crate::err::Error> {
         let class = self.get_object_class_internal(object);
         if self.exception_occurred() || class == None {
             let message = format!("class for object {:?} not found", object);
             self.diagnose_exception(&message)?;
-            Err(::err::Error::Jni(message))
+            Err(crate::err::Error::Jni(message))
         } else {
             Ok(class.expect("unexpected error"))
         }
     }
 
-    fn get_object_class_internal(&mut self, object: ::jvmti::jobject) -> Option<::jvmti::jclass> {
+    fn get_object_class_internal(&mut self, object: crate::jvmti::jobject) -> Option<crate::jvmti::jclass> {
         let class;
         unsafe {
             class = (**self.jni)
@@ -565,10 +565,10 @@ impl JniEnv {
 
     pub fn get_static_method_id(
         &mut self,
-        class: ::jvmti::jclass,
+        class: crate::jvmti::jclass,
         method: &str,
         signature: &str,
-    ) -> Result<::jvmti::jmethodID, ::err::Error> {
+    ) -> Result<crate::jvmti::jmethodID, crate::err::Error> {
         let method_id;
         let method_name = CString::new(method).expect("invalid method name");
         let sig_name = CString::new(signature).expect("invalid method signature");
@@ -589,7 +589,7 @@ impl JniEnv {
                 method, signature
             );
             self.diagnose_exception(&message)?;
-            Err(::err::Error::Jni(message))
+            Err(crate::err::Error::Jni(message))
         } else {
             Ok(method_id)
         }
@@ -597,7 +597,7 @@ impl JniEnv {
 
     pub fn get_string_utf_chars<'a>(
         &mut self,
-        s: ::jvmti::jstring,
+        s: crate::jvmti::jstring,
     ) -> (*const ::std::os::raw::c_char, &'a CStr) {
         let utf_chars;
         let cstr;
@@ -615,7 +615,7 @@ impl JniEnv {
 
     pub fn release_string_utf_chars(
         &mut self,
-        s: ::jvmti::jstring,
+        s: crate::jvmti::jstring,
         utf_chars: *const ::std::os::raw::c_char,
     ) {
         unsafe {

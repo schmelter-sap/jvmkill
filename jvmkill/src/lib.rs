@@ -29,8 +29,8 @@ mod err;
 mod heap;
 mod jvmti;
 
-use agentcontroller::MutAction;
-use env::JvmTI;
+use crate::agentcontroller::MutAction;
+use crate::env::JvmTI;
 
 #[macro_use]
 extern crate lazy_static;
@@ -55,7 +55,7 @@ impl<'a> AgentContext<'a> {
         self.ac = Some(a);
     }
 
-    pub fn on_oom(&mut self, jni_env: ::env::JniEnv, resource_exhaustion_flags: ::jvmti::jint) {
+    pub fn on_oom(&mut self, jni_env: crate::env::JniEnv, resource_exhaustion_flags: crate::jvmti::jint) {
         if let Some(a) = self.ac.as_mut() {
             a.on_oom(jni_env, resource_exhaustion_flags)
         }
@@ -93,7 +93,7 @@ pub extern "C" fn Agent_OnLoad(
     0
 }
 
-fn resource_exhausted(_: env::JvmTiEnv, jni_env: env::JniEnv, flags: ::jvmti::jint) {
+fn resource_exhausted(_: env::JvmTiEnv, jni_env: env::JniEnv, flags: crate::jvmti::jint) {
     STATIC_CONTEXT
         .lock()
         .expect("static lock was not acquired")

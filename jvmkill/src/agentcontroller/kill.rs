@@ -43,7 +43,7 @@ impl ::std::fmt::Display for Kill {
 }
 
 impl super::Action for Kill {
-    fn on_oom(&self, _: ::env::JniEnv, _: ::jvmti::jint) -> Result<(), ::err::Error> {
+    fn on_oom(&self, _: crate::env::JniEnv, _: crate::jvmti::jint) -> Result<(), crate::err::Error> {
         eprintln!("\njvmkill killing current process");
         unsafe {
             kill(getpid(), self.signal);
@@ -82,7 +82,7 @@ mod tests {
 
         let mut kill = super::Kill::new();
         kill.setSignal(SIGUSR1);
-        kill.on_oom(::env::JniEnv::new(::std::ptr::null_mut()), 0).expect("on_oom failed");
+        kill.on_oom(crate::env::JniEnv::new(::std::ptr::null_mut()), 0).expect("on_oom failed");
 
         // Allow time for signal to be dispatched.
         thread::sleep(time::Duration::from_millis(100));

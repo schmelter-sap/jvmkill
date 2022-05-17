@@ -15,7 +15,7 @@
  */
 
 use std::env;
-use common::run_java;
+use crate::common::run_java;
 
 mod common;
 

@@ -19,7 +19,7 @@ use std::collections::HashMap;
 use std::io::Write;
 
 pub trait Record {
-    fn recordObject(&mut self, class_name: String, object_size: ::jvmti::jlong);
+    fn recordObject(&mut self, class_name: String, object_size: crate::jvmti::jlong);
 }
 
 pub trait Print {
@@ -29,7 +29,7 @@ pub trait Print {
 #[derive(Default)]
 struct ObjectStats {
     count: usize,
-    total_size: ::jvmti::jlong,
+    total_size: crate::jvmti::jlong,
 }
 
 pub struct Stats {
@@ -75,7 +75,7 @@ impl Print for Stats {
 }
 
 impl Record for Stats {
-    fn recordObject(&mut self, class_name: String, object_size: ::jvmti::jlong) {
+    fn recordObject(&mut self, class_name: String, object_size: crate::jvmti::jlong) {
         let s = self
             .java_objects
             .entry(class_name)

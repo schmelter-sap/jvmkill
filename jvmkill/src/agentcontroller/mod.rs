@@ -20,7 +20,7 @@ pub mod controller;
 
 pub trait MutAction {
     // See https://docs.oracle.com/javase/8/docs/platform/jvmti/jvmti.html#jvmtiResourceExhaustionFlags
-    fn on_oom(&mut self, jni_env: ::env::JniEnv, resource_exhaustion_flags: ::jvmti::jint);
+    fn on_oom(&mut self, jni_env: crate::env::JniEnv, resource_exhaustion_flags: crate::jvmti::jint);
 }
 
 mod heapdump;
@@ -36,5 +36,5 @@ trait Heuristic {
 
 trait Action: Display {
     // See https://docs.oracle.com/javase/8/docs/platform/jvmti/jvmti.html#jvmtiResourceExhaustionFlags
-    fn on_oom(&self, jni_env: ::env::JniEnv, resource_exhaustion_flags: ::jvmti::jint) -> Result<(), ::err::Error>;
+    fn on_oom(&self, jni_env: crate::env::JniEnv, resource_exhaustion_flags: crate::jvmti::jint) -> Result<(), crate::err::Error>;
 }

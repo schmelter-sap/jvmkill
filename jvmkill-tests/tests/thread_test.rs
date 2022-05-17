@@ -17,7 +17,7 @@
 #[macro_use]
 extern crate lazy_static;
 use std::sync::Mutex;
-use common::run_java;
+use crate::common::run_java;
 
 mod common;
 

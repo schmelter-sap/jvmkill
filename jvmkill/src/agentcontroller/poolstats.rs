@@ -64,14 +64,14 @@ impl ::std::fmt::Display for PoolStats {
 impl super::Action for PoolStats {
     fn on_oom(
         &self,
-        mut jni_env: ::env::JniEnv,
-        resource_exhaustion_flags: ::jvmti::jint,
-    ) -> Result<(), ::err::Error> {
+        mut jni_env: crate::env::JniEnv,
+        resource_exhaustion_flags: crate::jvmti::jint,
+    ) -> Result<(), crate::err::Error> {
         // Do not attempt to obtain pool stats on thread exhaustion as this fails abruptly.
-        const threads_exhausted: ::jvmti::jint =
-            ::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as ::jvmti::jint;
+        const threads_exhausted: crate::jvmti::jint =
+            crate::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as crate::jvmti::jint;
         if resource_exhaustion_flags & threads_exhausted == threads_exhausted {
-            return Err(::err::Error::ActionUnavailableOnThreadExhaustion(
+            return Err(crate::err::Error::ActionUnavailableOnThreadExhaustion(
                 "determine memory usage statistics".to_string(),
             ));
         }
@@ -139,7 +139,7 @@ impl super::Action for PoolStats {
             let pool_mxbean =
                 jni_env.call_object_method_with_int(mem_pool_mxbeans, get_method_id, i)?;
             let name =
-                jni_env.call_object_method(pool_mxbean, get_name_method_id)? as ::jvmti::jstring;
+                jni_env.call_object_method(pool_mxbean, get_name_method_id)? as crate::jvmti::jstring;
             let usage = jni_env.call_object_method(pool_mxbean, get_usage_method_id)?;
             let (name_utf_chars, name_cstr) = jni_env.get_string_utf_chars(name);
             let name_string = name_cstr.to_string_lossy().into_owned();
@@ -155,9 +155,9 @@ impl super::Action for PoolStats {
 type Stats = (i64, i64, i64, i64);
 
 fn usage_statistics(
-    mut jni_env: ::env::JniEnv,
-    usage: ::jvmti::jobject,
-) -> Result<Stats, ::err::Error> {
+    mut jni_env: crate::env::JniEnv,
+    usage: crate::jvmti::jobject,
+) -> Result<Stats, crate::err::Error> {
     let memory_usage_class = jni_env.get_object_class(usage)?;
     let get_init_method_id = jni_env.get_method_id(memory_usage_class, "getInit", "()J")?;
     let get_used_method_id = jni_env.get_method_id(memory_usage_class, "getUsed", "()J")?;

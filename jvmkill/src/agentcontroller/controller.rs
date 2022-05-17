@@ -25,10 +25,10 @@ pub struct AgentController<'a, T: Write> {
 
 impl<'a, T: Write> AgentController<'a, T> {
     pub fn new(
-        ti: ::env::JvmTiEnv,
+        ti: crate::env::JvmTiEnv,
         options: *mut ::std::os::raw::c_char,
         log: T,
-    ) -> Result<Self, ::jvmti::jint> {
+    ) -> Result<Self, crate::jvmti::jint> {
         let parms = super::parms::AgentParameters::parseParameters(options);
 
         let mut ac = Self {
@@ -81,9 +81,9 @@ impl<'a, T: Write> AgentController<'a, T> {
 }
 
 impl<'a, T: Write> super::MutAction for AgentController<'a, T> {
-    fn on_oom(&mut self, jni_env: ::env::JniEnv, resource_exhaustion_flags: ::jvmti::jint) {
-        const oom_error: ::jvmti::jint =
-            ::jvmti::JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR as ::jvmti::jint;
+    fn on_oom(&mut self, jni_env: crate::env::JniEnv, resource_exhaustion_flags: crate::jvmti::jint) {
+        const oom_error: crate::jvmti::jint =
+            crate::jvmti::JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR as crate::jvmti::jint;
 
         writeln!(
             &mut self.log,
@@ -108,11 +108,11 @@ impl<'a, T: Write> super::MutAction for AgentController<'a, T> {
     }
 }
 
-fn resource_exhaustion_symptom(resource_exhaustion_flags: ::jvmti::jint) -> &'static str {
-    const heap_exhausted: ::jvmti::jint =
-        ::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as ::jvmti::jint;
-    const threads_exhausted: ::jvmti::jint =
-        ::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as ::jvmti::jint;
+fn resource_exhaustion_symptom(resource_exhaustion_flags: crate::jvmti::jint) -> &'static str {
+    const heap_exhausted: crate::jvmti::jint =
+        crate::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as crate::jvmti::jint;
+    const threads_exhausted: crate::jvmti::jint =
+        crate::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as crate::jvmti::jint;
 
     if resource_exhaustion_flags & heap_exhausted == heap_exhausted {
         if resource_exhaustion_flags & threads_exhausted == threads_exhausted {
@@ -133,7 +133,7 @@ unsafe impl<'a, T: Write> Sync for AgentController<'a, T> {}
 
 #[cfg(test)]
 mod tests {
-    use agentcontroller::MutAction;
+    use crate::agentcontroller::MutAction;
 
     pub struct TestHeuristic {
         call_count: u32,
@@ -167,7 +167,7 @@ mod tests {
     }
 
     impl super::super::Action for TestAction {
-        fn on_oom(&self, _: ::env::JniEnv, _: ::jvmti::jint) -> Result<(), ::err::Error> {
+        fn on_oom(&self, _: crate::env::JniEnv, _: crate::jvmti::jint) -> Result<(), crate::err::Error> {
             panic!("TestAction.on_oom")
         }
     }
@@ -194,7 +194,7 @@ mod tests {
         let mut ac = test_ac();
         ac.on_oom(
             dummy_jni_env(),
-            ::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as ::jvmti::jint,
+            crate::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as crate::jvmti::jint,
         );
         assert_eq!(
             ac.output(),
@@ -207,7 +207,7 @@ mod tests {
         let mut ac = test_ac();
         ac.on_oom(
             dummy_jni_env(),
-            ::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as ::jvmti::jint,
+            crate::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as crate::jvmti::jint,
         );
         assert_eq!(
             ac.output(),
@@ -220,8 +220,8 @@ mod tests {
         let mut ac = test_ac();
         ac.on_oom(
             dummy_jni_env(),
-            (::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as ::jvmti::jint)
-                + (::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS) as ::jvmti::jint,
+            (crate::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as crate::jvmti::jint)
+                + (crate::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS) as crate::jvmti::jint,
         );
         assert_eq!(ac.output(), "\nResource exhaustion event: the JVM was unable to allocate memory from the heap and create a thread.\n")
     }
@@ -245,7 +245,7 @@ mod tests {
         super::AgentController::test_new(heuristic, vec![Box::new(TestAction::new())], Vec::new())
     }
 
-    fn dummy_jni_env() -> ::env::JniEnv {
-        ::env::JniEnv::new(::std::ptr::null_mut())
+    fn dummy_jni_env() -> crate::env::JniEnv {
+        crate::env::JniEnv::new(::std::ptr::null_mut())
     }
 }

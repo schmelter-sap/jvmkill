@@ -21,14 +21,14 @@ use std::fmt::Result;
 #[derive(Debug)]
 pub enum Error {
     Jni(String),
-    JvmTi(String, ::jvmti::jint),
+    JvmTi(String, crate::jvmti::jint),
     Io(String, ::std::io::Error),
     ActionUnavailableOnThreadExhaustion(String),
 }
 
 impl Error {
     #[allow(unused_variables)]
-    pub fn rc(&self) -> ::jvmti::jint {
+    pub fn rc(&self) -> crate::jvmti::jint {
         match *self {
             Error::JvmTi(ref message, ref rc) => *rc,
             _ => 0,

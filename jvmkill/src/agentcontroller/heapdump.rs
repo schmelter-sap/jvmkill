@@ -43,14 +43,14 @@ impl ::std::fmt::Display for HeapDump {
 impl super::Action for HeapDump {
     fn on_oom(
         &self,
-        mut jni_env: ::env::JniEnv,
-        resource_exhaustion_flags: ::jvmti::jint,
-    ) -> Result<(), ::err::Error> {
+        mut jni_env: crate::env::JniEnv,
+        resource_exhaustion_flags: crate::jvmti::jint,
+    ) -> Result<(), crate::err::Error> {
         // Do not attempt to generate heapdump on thread exhaustion as this fails abruptly.
-        const threads_exhausted: ::jvmti::jint =
-            ::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as ::jvmti::jint;
+        const threads_exhausted: crate::jvmti::jint =
+            crate::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as crate::jvmti::jint;
         if resource_exhaustion_flags & threads_exhausted == threads_exhausted {
-            return Err(::err::Error::ActionUnavailableOnThreadExhaustion(
+            return Err(crate::err::Error::ActionUnavailableOnThreadExhaustion(
                 "generate a heap dump".to_string(),
             ));
         }
@@ -89,7 +89,7 @@ impl super::Action for HeapDump {
             .expect("invalid resolved heap dump path");
 
             fs::create_dir_all(&resolved_heap_dump_path_parent).map_err(|err| {
-                ::err::Error::Io(
+                crate::err::Error::Io(
                     format!(
                         "failed to create heap dump directory {:?}",
                         resolved_heap_dump_path_cstring
@@ -102,7 +102,7 @@ impl super::Action for HeapDump {
                 hotspot_diagnostic_mxbean,
                 dump_heap_method_id,
                 resolved_heap_dump_path_cstring.clone(),
-                ::jvmti::JNI_TRUE as u8,
+                crate::jvmti::JNI_TRUE as u8,
             )?;
 
             writeln_paced!(

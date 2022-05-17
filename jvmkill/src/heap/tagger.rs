@@ -17,13 +17,13 @@
 use std::collections::HashMap;
 
 pub trait Tag {
-    fn class_tag(&mut self, sig: &str) -> ::jvmti::jlong;
-    fn class_signature(&self, tag: ::jvmti::jlong) -> Option<String>;
+    fn class_tag(&mut self, sig: &str) -> crate::jvmti::jlong;
+    fn class_signature(&self, tag: crate::jvmti::jlong) -> Option<String>;
 }
 
 pub struct Tagger {
-    next_class_tag: ::jvmti::jlong,
-    sigs: HashMap<::jvmti::jlong, String>,
+    next_class_tag: crate::jvmti::jlong,
+    sigs: HashMap<crate::jvmti::jlong, String>,
 }
 
 impl Tagger {
@@ -36,13 +36,13 @@ impl Tagger {
 }
 
 impl Tag for Tagger {
-    fn class_tag(&mut self, sig: &str) -> ::jvmti::jlong {
+    fn class_tag(&mut self, sig: &str) -> crate::jvmti::jlong {
         self.next_class_tag += 1;
         self.sigs.insert(self.next_class_tag, String::from(sig));
         self.next_class_tag
     }
 
-    fn class_signature(&self, tag: ::jvmti::jlong) -> Option<String> {
+    fn class_signature(&self, tag: crate::jvmti::jlong) -> Option<String> {
         self.sigs.get(&tag).cloned()
     }
 }

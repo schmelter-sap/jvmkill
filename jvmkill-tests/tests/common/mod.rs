@@ -84,11 +84,11 @@ fn jvmkill() -> PathBuf {
         "libjvmkill.so"
     };
 
-    env::var("LD_LIBRARY_PATH")
-        .or_else(|_| env::var("DYLD_LIBRARY_PATH"))
-        .unwrap()
-        .split(':')
-        .map(|root| PathBuf::from(root).join(lib_name))
-        .find(|path| path.exists())
-        .unwrap()
+    env::current_dir()
+        .expect("no current working directory")
+        .parent()
+        .expect("must have parent")
+        .join("target")
+        .join("debug")
+        .join(lib_name)
 }
