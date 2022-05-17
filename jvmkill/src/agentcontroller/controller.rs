@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 the original author or authors.
+ * Copyright (c) 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,31 +18,43 @@ use libc::SIGQUIT;
 use std::io::Write;
 
 pub struct AgentController<'a, T: Write> {
-    heuristic: Box<super::Heuristic + 'a>,
-    actions: Vec<Box<super::Action>>,
-    log: T
+    heuristic: Box<dyn super::Heuristic + 'a>,
+    actions: Vec<Box<dyn super::Action>>,
+    log: T,
 }
 
 impl<'a, T: Write> AgentController<'a, T> {
-    pub fn new(ti: ::env::JvmTiEnv, options: *mut ::std::os::raw::c_char, log: T) -> Result<Self, ::jvmti::jint> {
+    pub fn new(
+        ti: ::env::JvmTiEnv,
+        options: *mut ::std::os::raw::c_char,
+        log: T,
+    ) -> Result<Self, ::jvmti::jint> {
         let parms = super::parms::AgentParameters::parseParameters(options);
 
         let mut ac = Self {
-            heuristic: Box::new(super::threshold::Threshold::new(parms.count_threshold, parms.time_threshold)),
+            heuristic: Box::new(super::threshold::Threshold::new(
+                parms.count_threshold,
+                parms.time_threshold,
+            )),
             actions: Vec::new(),
-            log: log
+            log,
         };
 
         if parms.print_heap_histogram {
-            ac.actions.push(Box::new(super::heaphistogram::HeapHistogram::new(ti, parms.heap_histogram_max_entries).map_err(|err| err.rc())?));
+            ac.actions.push(Box::new(
+                super::heaphistogram::HeapHistogram::new(ti, parms.heap_histogram_max_entries)
+                    .map_err(|err| err.rc())?,
+            ));
         }
 
         if let Some(path) = parms.heap_dump_path {
-            ac.actions.push(Box::new(super::heapdump::HeapDump::new(path)));
+            ac.actions
+                .push(Box::new(super::heapdump::HeapDump::new(path)));
         }
 
         if parms.print_memory_usage {
-            ac.actions.push(Box::new(super::poolstats::PoolStats::new()));
+            ac.actions
+                .push(Box::new(super::poolstats::PoolStats::new()));
         }
 
         let mut threadDump = super::kill::Kill::new();
@@ -55,20 +67,30 @@ impl<'a, T: Write> AgentController<'a, T> {
     }
 
     #[cfg(test)]
-    fn test_new(heuristic: Box<super::Heuristic + 'a>, actions: Vec<Box<super::Action>>, log: T) -> Self {
+    fn test_new(
+        heuristic: Box<dyn super::Heuristic + 'a>,
+        actions: Vec<Box<dyn super::Action>>,
+        log: T,
+    ) -> Self {
         Self {
-            heuristic: heuristic,
-            actions: actions,
-            log: log
+            heuristic,
+            actions,
+            log,
         }
     }
 }
 
 impl<'a, T: Write> super::MutAction for AgentController<'a, T> {
     fn on_oom(&mut self, jni_env: ::env::JniEnv, resource_exhaustion_flags: ::jvmti::jint) {
-        const oom_error: ::jvmti::jint = ::jvmti::JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR as ::jvmti::jint;
+        const oom_error: ::jvmti::jint =
+            ::jvmti::JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR as ::jvmti::jint;
 
-        writeln!(&mut self.log, "\nResource exhaustion event{}.", resource_exhaustion_symptom(resource_exhaustion_flags)).unwrap();
+        writeln!(
+            &mut self.log,
+            "\nResource exhaustion event{}.",
+            resource_exhaustion_symptom(resource_exhaustion_flags)
+        )
+        .unwrap();
 
         if self.heuristic.on_oom() {
             for action in &self.actions {
@@ -77,14 +99,20 @@ impl<'a, T: Write> super::MutAction for AgentController<'a, T> {
                 }
             }
         } else if resource_exhaustion_flags & oom_error == oom_error {
-            writeln!(&mut self.log, "\nThe JVM is about to throw a java.lang.OutOfMemoryError.").unwrap();
+            writeln!(
+                &mut self.log,
+                "\nThe JVM is about to throw a java.lang.OutOfMemoryError."
+            )
+            .unwrap();
         }
     }
 }
 
 fn resource_exhaustion_symptom(resource_exhaustion_flags: ::jvmti::jint) -> &'static str {
-    const heap_exhausted: ::jvmti::jint = ::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as ::jvmti::jint;
-    const threads_exhausted: ::jvmti::jint = ::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as ::jvmti::jint;
+    const heap_exhausted: ::jvmti::jint =
+        ::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as ::jvmti::jint;
+    const threads_exhausted: ::jvmti::jint =
+        ::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as ::jvmti::jint;
 
     if resource_exhaustion_flags & heap_exhausted == heap_exhausted {
         if resource_exhaustion_flags & threads_exhausted == threads_exhausted {
@@ -108,14 +136,12 @@ mod tests {
     use agentcontroller::MutAction;
 
     pub struct TestHeuristic {
-        call_count: u32
+        call_count: u32,
     }
 
     impl TestHeuristic {
         pub fn new() -> Self {
-            Self {
-                call_count: 0,
-            }
+            Self { call_count: 0 }
         }
     }
 
@@ -166,22 +192,37 @@ mod tests {
     #[test]
     fn prints_heap_resource_exhaustion_message() {
         let mut ac = test_ac();
-        ac.on_oom(dummy_jni_env(), ::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as ::jvmti::jint);
-        assert_eq!(ac.output(), "\nResource exhaustion event: the JVM was unable to allocate memory from the heap.\n")
+        ac.on_oom(
+            dummy_jni_env(),
+            ::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as ::jvmti::jint,
+        );
+        assert_eq!(
+            ac.output(),
+            "\nResource exhaustion event: the JVM was unable to allocate memory from the heap.\n"
+        )
     }
 
     #[test]
     fn prints_thread_resource_exhaustion_message() {
         let mut ac = test_ac();
-        ac.on_oom(dummy_jni_env(), ::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as ::jvmti::jint);
-        assert_eq!(ac.output(), "\nResource exhaustion event: the JVM was unable to create a thread.\n")
+        ac.on_oom(
+            dummy_jni_env(),
+            ::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS as ::jvmti::jint,
+        );
+        assert_eq!(
+            ac.output(),
+            "\nResource exhaustion event: the JVM was unable to create a thread.\n"
+        )
     }
 
     #[test]
     fn prints_heap_and_thread_resource_exhaustion_message() {
         let mut ac = test_ac();
-        ac.on_oom(dummy_jni_env(), (::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as ::jvmti::jint) +
-            (::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS) as ::jvmti::jint);
+        ac.on_oom(
+            dummy_jni_env(),
+            (::jvmti::JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP as ::jvmti::jint)
+                + (::jvmti::JVMTI_RESOURCE_EXHAUSTED_THREADS) as ::jvmti::jint,
+        );
         assert_eq!(ac.output(), "\nResource exhaustion event: the JVM was unable to allocate memory from the heap and create a thread.\n")
     }
 

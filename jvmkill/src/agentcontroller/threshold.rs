@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 the original author or authors.
+ * Copyright (c) 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,21 @@
  * limitations under the License.
  */
 
+use chrono::prelude::*;
+
 pub struct Threshold {
-    time_threshold: u64,
+    time_threshold: i64,
     count_threshold: usize,
     // circular buffer containing the timestamps of up to count_threshold + 1 OOMs
-    events: Vec<u64>,
+    events: Vec<i64>,
     event_index: usize,
 }
 
 impl Threshold {
-    pub fn new(count_threshold: usize, time_threshold: usize) -> Threshold {
+    pub fn new(count_threshold: usize, time_threshold: i64) -> Threshold {
         let mut t = Threshold {
-            time_threshold: 1000 * (time_threshold as u64),
-            count_threshold: count_threshold,
+            time_threshold: 1000 * (time_threshold as i64),
+            count_threshold,
             events: Vec::with_capacity(count_threshold + 1),
             event_index: 0,
         };
@@ -54,17 +56,18 @@ impl Threshold {
     }
 }
 
-fn millis() -> u64 {
-    use time::precise_time_ns;
-
-    precise_time_ns() / 1000000
+fn millis() -> i64 {
+    Utc::now().timestamp_millis()
 }
 
 impl super::Heuristic for Threshold {
     fn on_oom(&mut self) -> bool {
         self.add_event();
         let eventCount = self.count_events();
-        eprintln!("ResourceExhausted! ({}/{})", eventCount, self.count_threshold);
+        eprintln!(
+            "ResourceExhausted! ({}/{})",
+            eventCount, self.count_threshold
+        );
         eventCount > self.count_threshold
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 the original author or authors.
+ * Copyright (c) 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,19 +21,19 @@ use std::path::PathBuf;
  */
 #[derive(Debug)]
 pub struct AgentParameters {
-    pub time_threshold: usize,
+    pub time_threshold: i64,
     pub count_threshold: usize,
     pub print_heap_histogram: bool,
     pub heap_histogram_max_entries: usize,
     pub print_memory_usage: bool,
-    pub heap_dump_path: Option<PathBuf>
+    pub heap_dump_path: Option<PathBuf>,
 }
 
 impl AgentParameters {
     pub fn parseParameters(options: *const ::std::os::raw::c_char) -> Self {
         use std::ffi::CStr;
 
-        let mut time_threshold: usize = 1;
+        let mut time_threshold: i64 = 1;
         let mut count_threshold: usize = 0;
         let mut print_heap_histogram: usize = 0;
         let mut heap_histogram_max_entries: usize = 100;
@@ -49,31 +49,51 @@ impl AgentParameters {
             let options = s.split(',').collect::<Vec<_>>();
             for option in &options {
                 if option.is_empty() {
-                    continue
+                    continue;
                 }
                 let tokens = option.splitn(2, '=').collect::<Vec<_>>();
                 assert_eq!(tokens.len(), 2, "invalid option: {}", option);
                 let key = tokens[0];
                 let value = tokens[1];
                 match key {
-                    "time" => if !value.is_empty() { time_threshold = value.parse().expect("not a number") },
-                    "count" => if !value.is_empty() { count_threshold = value.parse().expect("not a number") },
-                    "printHeapHistogram" => if !value.is_empty() { print_heap_histogram = value.parse().expect("not a number") },
-                    "heapHistogramMaxEntries" => if !value.is_empty() { heap_histogram_max_entries = value.parse().expect("not a number") },
-                    "printMemoryUsage" => if !value.is_empty() { print_memory_usage = value.parse().expect("not a number") },
+                    "time" => {
+                        if !value.is_empty() {
+                            time_threshold = value.parse().expect("not a number")
+                        }
+                    }
+                    "count" => {
+                        if !value.is_empty() {
+                            count_threshold = value.parse().expect("not a number")
+                        }
+                    }
+                    "printHeapHistogram" => {
+                        if !value.is_empty() {
+                            print_heap_histogram = value.parse().expect("not a number")
+                        }
+                    }
+                    "heapHistogramMaxEntries" => {
+                        if !value.is_empty() {
+                            heap_histogram_max_entries = value.parse().expect("not a number")
+                        }
+                    }
+                    "printMemoryUsage" => {
+                        if !value.is_empty() {
+                            print_memory_usage = value.parse().expect("not a number")
+                        }
+                    }
                     "heapDumpPath" => heap_dump_path = Some(PathBuf::from(value)),
-                    _ => assert!(false, "unknown option: {}", key),
+                    _ => panic!("unknown option: {}", key),
                 }
             }
         }
 
         Self {
-            time_threshold: time_threshold,
-            count_threshold: count_threshold,
+            time_threshold,
+            count_threshold,
             print_heap_histogram: print_heap_histogram != 0,
-            heap_histogram_max_entries: heap_histogram_max_entries,
+            heap_histogram_max_entries,
             print_memory_usage: print_memory_usage != 0,
-            heap_dump_path: heap_dump_path
+            heap_dump_path,
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 the original author or authors.
+ * Copyright (c) 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,26 @@ use std::env;
 use std::path::PathBuf;
 use std::process::Command;
 
-pub fn run_java(class: &str, arguments: &str, expected_stdout: &[&str], expected_stderr: &[&str]) -> bool {
+pub fn run_java(
+    class: &str,
+    arguments: &str,
+    expected_stdout: &[&str],
+    expected_stderr: &[&str],
+) -> bool {
     let output = Command::new(&java())
-        .arg(format!("-agentpath:{}{}", jvmkill().to_str().unwrap(), arguments))
-        .arg("-cp").arg(jvmkill_test().to_str().unwrap())
+        .arg(format!(
+            "-agentpath:{}{}",
+            jvmkill().to_str().unwrap(),
+            arguments
+        ))
+        .arg("-cp")
+        .arg(jvmkill_test().to_str().unwrap())
         .arg("-Xmx50m")
         .arg("-XX:ReservedCodeCacheSize=10m")
         .arg("-XX:-UseCompressedOops")
         .arg(class)
-        .output().expect("failed to run Java process");
+        .output()
+        .expect("failed to run Java process");
 
     assert_contents(&output.stdout, expected_stdout);
     assert_contents(&output.stderr, expected_stderr);
@@ -34,7 +45,7 @@ pub fn run_java(class: &str, arguments: &str, expected_stdout: &[&str], expected
     output.status.success()
 }
 
-fn assert_contents(stream: &Vec<u8>, expected :&[&str]) {
+fn assert_contents(stream: &[u8], expected: &[&str]) {
     let s = String::from_utf8_lossy(stream);
     println!("OUTPUT:\n{}\n:OUTPUT", s);
     let mut success = true;
@@ -51,11 +62,19 @@ fn assert_contents(stream: &Vec<u8>, expected :&[&str]) {
 }
 
 fn java() -> PathBuf {
-    PathBuf::from(env::var("JAVA_HOME").unwrap()).join("bin").join("java")
+    PathBuf::from(env::var("JAVA_HOME").unwrap())
+        .join("bin")
+        .join("java")
 }
 
 fn jvmkill_test() -> PathBuf {
-    env::current_dir().unwrap().parent().unwrap().join("resource-exhaustion-generator").join("target").join("resource-exhaustion-generator-0.0.0.jar")
+    env::current_dir()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("resource-exhaustion-generator")
+        .join("target")
+        .join("resource-exhaustion-generator-0.0.0.jar")
 }
 
 fn jvmkill() -> PathBuf {
@@ -65,8 +84,11 @@ fn jvmkill() -> PathBuf {
         "libjvmkill.so"
     };
 
-    env::var("LD_LIBRARY_PATH").or(env::var("DYLD_LIBRARY_PATH")).unwrap()
-        .split(":")
+    env::var("LD_LIBRARY_PATH")
+        .or_else(|_| env::var("DYLD_LIBRARY_PATH"))
+        .unwrap()
+        .split(':')
         .map(|root| PathBuf::from(root).join(lib_name))
-        .find(|path| path.exists()).unwrap()
+        .find(|path| path.exists())
+        .unwrap()
 }

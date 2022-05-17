@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 the original author or authors.
+ * Copyright (c) 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 use std::collections::HashMap;
 
 pub trait Tag {
-    fn class_tag(&mut self, sig: &String) -> ::jvmti::jlong;
+    fn class_tag(&mut self, sig: &str) -> ::jvmti::jlong;
     fn class_signature(&self, tag: ::jvmti::jlong) -> Option<String>;
 }
 
@@ -36,9 +36,9 @@ impl Tagger {
 }
 
 impl Tag for Tagger {
-    fn class_tag(&mut self, sig: &String) -> ::jvmti::jlong {
+    fn class_tag(&mut self, sig: &str) -> ::jvmti::jlong {
         self.next_class_tag += 1;
-        self.sigs.insert(self.next_class_tag, sig.clone());
+        self.sigs.insert(self.next_class_tag, String::from(sig));
         self.next_class_tag
     }
 

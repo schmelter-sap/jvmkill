@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 the original author or authors.
+ * Copyright (c) 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,13 @@
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::fmt::Result;
-use time::ParseError;
 
 #[derive(Debug)]
 pub enum Error {
     Jni(String),
     JvmTi(String, ::jvmti::jint),
-    Parse(String, ParseError),
     Io(String, ::std::io::Error),
-    ActionUnavailableOnThreadExhaustion(String)
+    ActionUnavailableOnThreadExhaustion(String),
 }
 
 impl Error {
@@ -33,7 +31,7 @@ impl Error {
     pub fn rc(&self) -> ::jvmti::jint {
         match *self {
             Error::JvmTi(ref message, ref rc) => *rc,
-            _ => 0
+            _ => 0,
         }
     }
 }
@@ -43,9 +41,14 @@ impl Display for Error {
         match *self {
             Error::Jni(ref message) => write!(f, "JNI call failed: {}", message),
             Error::JvmTi(ref message, ref rc) => write!(f, "{}: {:?}", message, rc),
-            Error::Parse(ref message, ref parse_error) => write!(f, "{}: parse error: {}", message, parse_error),
-            Error::Io(ref message, ref io_error) => write!(f, "{}: I/O error: {}", message, io_error),
-            Error::ActionUnavailableOnThreadExhaustion(ref message) => write!(f, "cannot {} since the JVM is unable to create a thread", message)
+            Error::Io(ref message, ref io_error) => {
+                write!(f, "{}: I/O error: {}", message, io_error)
+            }
+            Error::ActionUnavailableOnThreadExhaustion(ref message) => write!(
+                f,
+                "cannot {} since the JVM is unable to create a thread",
+                message
+            ),
         }
     }
 }

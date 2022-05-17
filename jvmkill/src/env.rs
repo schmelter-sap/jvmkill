@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 the original author or authors.
+ * Copyright (c) 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,28 @@
  * limitations under the License.
  */
 
+use heap::tagger::Tag;
+use jvmti::jvmtiEnv;
+use std::ffi::CStr;
+use std::ffi::CString;
 use std::mem::size_of;
 use std::mem::transmute;
 use std::ptr;
-use std::ffi::CString;
-use std::ffi::CStr;
-use ::jvmti::jvmtiEnv;
-use ::heap::tagger::Tag;
 
 pub trait JvmTI {
     fn on_resource_exhausted(&mut self, callback: FnResourceExhausted) -> Result<(), ::err::Error>;
     fn enable_object_tagging(&mut self) -> Result<(), ::err::Error>;
-    fn tag_loaded_classes(&self, tagger: &mut Tag) -> Result<(), ::err::Error>;
+    fn tag_loaded_classes(&self, tagger: &mut dyn Tag) -> Result<(), ::err::Error>;
 
     // Restriction: traverse_live_heap may be called at most once in the lifetime of a JVM.
-    fn traverse_live_heap<F>(&self, closure: F) -> Result<(), ::err::Error> where F: FnMut(::jvmti::jlong, ::jvmti::jlong);
+    fn traverse_live_heap<F>(&self, closure: F) -> Result<(), ::err::Error>
+    where
+        F: FnMut(::jvmti::jlong, ::jvmti::jlong);
 }
 
 #[derive(Clone, Copy)]
 pub struct JvmTiEnv {
-    jvmti: *mut jvmtiEnv
+    jvmti: *mut jvmtiEnv,
 }
 
 impl JvmTiEnv {
@@ -41,13 +43,19 @@ impl JvmTiEnv {
         let mut penv: *mut ::std::os::raw::c_void = ptr::null_mut();
         let rc;
         unsafe {
-            rc = (**vm).GetEnv.expect("GetEnv function not found")(vm, &mut penv, ::jvmti::JVMTI_VERSION as i32);
+            rc = (**vm).GetEnv.expect("GetEnv function not found")(
+                vm,
+                &mut penv,
+                ::jvmti::JVMTI_VERSION as i32,
+            );
         }
         if rc as u32 != ::jvmti::JNI_OK {
             eprintln!("ERROR: GetEnv failed: {}", rc);
             return Err(::jvmti::JNI_ERR);
         }
-        Ok(JvmTiEnv { jvmti: penv as *mut jvmtiEnv })
+        Ok(JvmTiEnv {
+            jvmti: penv as *mut jvmtiEnv,
+        })
     }
 
     pub fn wrap(jvmti_env: *mut jvmtiEnv) -> JvmTiEnv {
@@ -81,9 +89,23 @@ impl JvmTI for JvmTiEnv {
             EVENT_CALLBACKS.resource_exhausted = Some(callback);
         }
 
-        let callbacks = ::jvmti::jvmtiEventCallbacks { ResourceExhausted: Some(resource_exhausted), ..Default::default() };
-        jvmtifn!(self.jvmti, SetEventCallbacks, &callbacks, size_of::<::jvmti::jvmtiEventCallbacks>() as i32)?;
-        jvmtifn!(self.jvmti, SetEventNotificationMode, ::jvmti::jvmtiEventMode_JVMTI_ENABLE, ::jvmti::jvmtiEvent_JVMTI_EVENT_RESOURCE_EXHAUSTED, ::std::ptr::null_mut())?;
+        let callbacks = ::jvmti::jvmtiEventCallbacks {
+            ResourceExhausted: Some(resource_exhausted),
+            ..Default::default()
+        };
+        jvmtifn!(
+            self.jvmti,
+            SetEventCallbacks,
+            &callbacks,
+            size_of::<::jvmti::jvmtiEventCallbacks>() as i32
+        )?;
+        jvmtifn!(
+            self.jvmti,
+            SetEventNotificationMode,
+            ::jvmti::jvmtiEventMode_JVMTI_ENABLE,
+            ::jvmti::jvmtiEvent_JVMTI_EVENT_RESOURCE_EXHAUSTED,
+            ::std::ptr::null_mut()
+        )?;
 
         Ok(())
     }
@@ -100,58 +122,83 @@ impl JvmTI for JvmTiEnv {
         Ok(())
     }
 
-    fn tag_loaded_classes(&self, tagger: &mut Tag) -> Result<(), ::err::Error> {
+    fn tag_loaded_classes(&self, tagger: &mut dyn Tag) -> Result<(), ::err::Error> {
         let mut class_count = 0;
         let mut class_ptr = ::std::ptr::null_mut();
-        jvmtifn!(self.jvmti, GetLoadedClasses, &mut class_count, &mut class_ptr)?;
+        jvmtifn!(
+            self.jvmti,
+            GetLoadedClasses,
+            &mut class_count,
+            &mut class_ptr
+        )?;
 
         while class_count > 0 {
             let mut sig_ptr = ::std::ptr::null_mut();
-            jvmtifn!(self.jvmti, GetClassSignature, *class_ptr, &mut sig_ptr, ::std::ptr::null_mut())?;
+            jvmtifn!(
+                self.jvmti,
+                GetClassSignature,
+                *class_ptr,
+                &mut sig_ptr,
+                ::std::ptr::null_mut()
+            )?;
             unsafe {
                 let cstr = CStr::from_ptr(sig_ptr); // sig_ptr is deallocated later
-                let tag = tagger.class_tag(&cstr.to_str().expect("invalid UTF-8 string").to_string());
+                let tag = tagger.class_tag(cstr.to_str().expect("invalid UTF-8 string"));
                 jvmtifn!(self.jvmti, SetTag, *class_ptr, tag)?;
             }
             jvmtifn!(self.jvmti, Deallocate, sig_ptr as *mut u8)?;
 
             class_count -= 1;
-            unsafe { class_ptr = class_ptr.offset(1); }
+            unsafe {
+                class_ptr = class_ptr.offset(1);
+            }
         }
 
         Ok(())
     }
 
     fn traverse_live_heap<F>(&self, mut closure: F) -> Result<(), ::err::Error>
-        where F: FnMut(::jvmti::jlong, ::jvmti::jlong) {
+    where
+        F: FnMut(::jvmti::jlong, ::jvmti::jlong),
+    {
         let callbacks = ::jvmti::jvmtiHeapCallbacks {
             heap_reference_callback: Some(heapReferenceCallback),
             ..Default::default()
         };
         // Pass closure to the callback as a thin pointer pointing to a fat pointer pointing to the closure.
         // See: https://stackoverflow.com/questions/38995701/how-do-i-pass-closures-through-raw-pointers-as-arguments-to-c-functions
-        let mut closure_ptr: &mut FnMut(::jvmti::jlong, ::jvmti::jlong) = &mut closure;
+        let mut closure_ptr: &mut dyn FnMut(::jvmti::jlong, ::jvmti::jlong) = &mut closure;
         let closure_ptr_ptr = unsafe { transmute(&mut closure_ptr) };
 
         // Need to pass the traversal state into FollowReferences and pick it up in the callback, which may be called multiple times
-        jvmtifn!(self.jvmti, FollowReferences, 0, ::std::ptr::null_mut(), ::std::ptr::null_mut(), &callbacks, closure_ptr_ptr)?;
+        jvmtifn!(
+            self.jvmti,
+            FollowReferences,
+            0,
+            ::std::ptr::null_mut(),
+            ::std::ptr::null_mut(),
+            &callbacks,
+            closure_ptr_ptr
+        )?;
 
         Ok(())
     }
 }
 
 #[allow(unused_variables)]
-unsafe extern "C" fn resource_exhausted(jvmti_env: *mut ::jvmti::jvmtiEnv,
-                                        jni_env: *mut ::jvmti::JNIEnv,
-                                        flags: ::jvmti::jint,
-                                        reserved: *const ::std::os::raw::c_void,
-                                        description: *const ::std::os::raw::c_char) -> () {
+unsafe extern "C" fn resource_exhausted(
+    jvmti_env: *mut ::jvmti::jvmtiEnv,
+    jni_env: *mut ::jvmti::JNIEnv,
+    flags: ::jvmti::jint,
+    reserved: *const ::std::os::raw::c_void,
+    description: *const ::std::os::raw::c_char,
+) {
     match EVENT_CALLBACKS.resource_exhausted {
         Some(function) => {
             let jvmti_env = JvmTiEnv::wrap(jvmti_env);
             function(jvmti_env, JniEnv::new(jni_env), flags);
         }
-        None => println!("No resource exhaustion exit registered")
+        None => println!("No resource exhaustion exit registered"),
     }
 }
 
@@ -159,24 +206,25 @@ pub type FnResourceExhausted = fn(jvmti_env: JvmTiEnv, jni_env: JniEnv, flags: :
 
 #[derive(Default, Clone)]
 pub struct EventCallbacks {
-    pub resource_exhausted: Option<FnResourceExhausted>
+    pub resource_exhausted: Option<FnResourceExhausted>,
 }
 
 pub static mut EVENT_CALLBACKS: EventCallbacks = EventCallbacks {
-    resource_exhausted: None
+    resource_exhausted: None,
 };
 
 #[allow(unused_variables)]
-unsafe extern "C" fn heapReferenceCallback(reference_kind: ::jvmti::jvmtiHeapReferenceKind,
-                                           reference_info: *const ::jvmti::jvmtiHeapReferenceInfo,
-                                           class_tag: ::jvmti::jlong,
-                                           referrer_class_tag: ::jvmti::jlong,
-                                           size: ::jvmti::jlong,
-                                           tag_ptr: *mut ::jvmti::jlong,
-                                           referrer_tag_ptr: *mut ::jvmti::jlong,
-                                           length: ::jvmti::jint,
-                                           user_data: *mut ::std::os::raw::c_void)
-                                           -> ::jvmti::jint {
+unsafe extern "C" fn heapReferenceCallback(
+    reference_kind: ::jvmti::jvmtiHeapReferenceKind,
+    reference_info: *const ::jvmti::jvmtiHeapReferenceInfo,
+    class_tag: ::jvmti::jlong,
+    referrer_class_tag: ::jvmti::jlong,
+    size: ::jvmti::jlong,
+    tag_ptr: *mut ::jvmti::jlong,
+    referrer_tag_ptr: *mut ::jvmti::jlong,
+    length: ::jvmti::jint,
+    user_data: *mut ::std::os::raw::c_void,
+) -> ::jvmti::jint {
     if *tag_ptr & TAG_VISITED_MASK == TAG_VISITED_MASK {
         return 0;
     }
@@ -187,7 +235,8 @@ unsafe extern "C" fn heapReferenceCallback(reference_kind: ::jvmti::jvmtiHeapRef
 
     // Add the object to the heap stats along with its class signature.
     let unmaskedClassTag = class_tag & !TAG_VISITED_MASK;
-    let closure: &mut &mut FnMut(::jvmti::jlong, ::jvmti::jlong) -> ::jvmti::jint = transmute(user_data);
+    let closure =
+        &mut *(user_data as *mut &mut dyn FnMut(::jvmti::jlong, ::jvmti::jlong) -> ::jvmti::jint);
     closure(unmaskedClassTag, size);
 
     ::jvmti::JVMTI_VISIT_OBJECTS as ::jvmti::jint
@@ -195,7 +244,7 @@ unsafe extern "C" fn heapReferenceCallback(reference_kind: ::jvmti::jvmtiHeapRef
 
 #[derive(Clone, Copy)]
 pub struct JniEnv {
-    jni: *mut ::jvmti::JNIEnv
+    jni: *mut ::jvmti::JNIEnv,
 }
 
 impl JniEnv {
@@ -203,22 +252,41 @@ impl JniEnv {
         JniEnv { jni: jni_env }
     }
 
-    pub fn call_int_method(&mut self, object: ::jvmti::jobject, method_id: ::jvmti::jmethodID) -> ::jvmti::jint {
+    pub fn call_int_method(
+        &mut self,
+        object: ::jvmti::jobject,
+        method_id: ::jvmti::jmethodID,
+    ) -> ::jvmti::jint {
         unsafe {
-            (**self.jni).CallIntMethod.expect("CallIntMethod function not found")(self.jni, object, method_id)
+            (**self.jni)
+                .CallIntMethod
+                .expect("CallIntMethod function not found")(self.jni, object, method_id)
         }
     }
 
-    pub fn call_long_method(&mut self, object: ::jvmti::jobject, method_id: ::jvmti::jmethodID) -> ::jvmti::jlong {
+    pub fn call_long_method(
+        &mut self,
+        object: ::jvmti::jobject,
+        method_id: ::jvmti::jmethodID,
+    ) -> ::jvmti::jlong {
         unsafe {
-            (**self.jni).CallLongMethod.expect("CallLongMethod function not found")(self.jni, object, method_id)
+            (**self.jni)
+                .CallLongMethod
+                .expect("CallLongMethod function not found")(self.jni, object, method_id)
         }
     }
 
-    pub fn call_object_method(&mut self, object: ::jvmti::jobject, method_id: ::jvmti::jmethodID) -> Result<::jvmti::jobject, ::err::Error> {
+    pub fn call_object_method(
+        &mut self,
+        object: ::jvmti::jobject,
+        method_id: ::jvmti::jmethodID,
+    ) -> Result<::jvmti::jobject, ::err::Error> {
         let result = self.call_object_method_internal(object, method_id);
         if self.exception_occurred() || result == None {
-            let message = format!("call to method_id {:?} on object {:?} failed", method_id, object);
+            let message = format!(
+                "call to method_id {:?} on object {:?} failed",
+                method_id, object
+            );
             self.diagnose_exception(&message)?;
             return Err(::err::Error::Jni(message));
         }
@@ -226,12 +294,20 @@ impl JniEnv {
         Ok(result.expect("unexpected error"))
     }
 
-    pub fn call_object_method_internal(&mut self, object: ::jvmti::jobject, method_id: ::jvmti::jmethodID) -> Option<::jvmti::jobject> {
+    pub fn call_object_method_internal(
+        &mut self,
+        object: ::jvmti::jobject,
+        method_id: ::jvmti::jmethodID,
+    ) -> Option<::jvmti::jobject> {
         let result;
         unsafe {
-            result = (**self.jni).CallObjectMethod.expect("CallObjectMethod function not found")(self.jni, object, method_id);
+            result = (**self.jni)
+                .CallObjectMethod
+                .expect("CallObjectMethod function not found")(
+                self.jni, object, method_id
+            );
         }
-        if result == ptr::null_mut() {
+        if result.is_null() {
             None
         } else {
             Some(result)
@@ -239,14 +315,26 @@ impl JniEnv {
     }
 
     // Rust doesn't have variadic functions (except for unsafe FFI bindings).
-    pub fn call_object_method_with_int(&mut self, object: ::jvmti::jobject, method_id: ::jvmti::jmethodID, n: ::jvmti::jint) -> Result<::jvmti::jobject, ::err::Error> {
-        let n_value: ::jvmti::jvalue = ::jvmti::jvalue {i: n};
+    pub fn call_object_method_with_int(
+        &mut self,
+        object: ::jvmti::jobject,
+        method_id: ::jvmti::jmethodID,
+        n: ::jvmti::jint,
+    ) -> Result<::jvmti::jobject, ::err::Error> {
+        let n_value: ::jvmti::jvalue = ::jvmti::jvalue { i: n };
         let result;
         unsafe {
-            result = (**self.jni).CallObjectMethodA.expect("CallObjectMethodA function not found")(self.jni, object, method_id, &n_value);
+            result = (**self.jni)
+                .CallObjectMethodA
+                .expect("CallObjectMethodA function not found")(
+                self.jni, object, method_id, &n_value,
+            );
         }
-        if self.exception_occurred() || result == ptr::null_mut() {
-            let message = format!("call to method_id {:?} on object {:?} with variable argument {} failed", method_id, object, n);
+        if self.exception_occurred() || result.is_null() {
+            let message = format!(
+                "call to method_id {:?} on object {:?} with variable argument {} failed",
+                method_id, object, n
+            );
             self.diagnose_exception(&message)?;
             Err(::err::Error::Jni(message))
         } else {
@@ -255,15 +343,32 @@ impl JniEnv {
     }
 
     // Rust doesn't have variadic functions (except for unsafe FFI bindings).
-    pub fn call_object_method_with_cstring_jboolean(&mut self, object: ::jvmti::jobject, method_id: ::jvmti::jmethodID, s: CString, b: ::jvmti::jboolean) -> Result<::jvmti::jobject, ::err::Error> {
+    pub fn call_object_method_with_cstring_jboolean(
+        &mut self,
+        object: ::jvmti::jobject,
+        method_id: ::jvmti::jmethodID,
+        s: CString,
+        b: ::jvmti::jboolean,
+    ) -> Result<::jvmti::jobject, ::err::Error> {
         let result;
         unsafe {
-            let s_jstring = (**self.jni).NewStringUTF.expect("NewStringUTF function not found")(self.jni, s.as_ptr());
-            let args: [::jvmti::jvalue; 2] = [::jvmti::jvalue {l: s_jstring}, ::jvmti::jvalue {z: b}];
-            result = (**self.jni).CallObjectMethodA.expect("CallObjectMethodA function not found")(self.jni, object, method_id, &args[0]);
+            let s_jstring =
+                (**self.jni)
+                    .NewStringUTF
+                    .expect("NewStringUTF function not found")(self.jni, s.as_ptr());
+            let args: [::jvmti::jvalue; 2] =
+                [::jvmti::jvalue { l: s_jstring }, ::jvmti::jvalue { z: b }];
+            result = (**self.jni)
+                .CallObjectMethodA
+                .expect("CallObjectMethodA function not found")(
+                self.jni, object, method_id, &args[0],
+            );
         }
-        if self.exception_occurred() || result == ptr::null_mut() {
-            let message = format!("call to method_id {:?} on object {:?} with variable arguments {:?}, {} failed", method_id, object, s, b);
+        if self.exception_occurred() || result.is_null() {
+            let message = format!(
+                "call to method_id {:?} on object {:?} with variable arguments {:?}, {} failed",
+                method_id, object, s, b
+            );
             self.diagnose_exception(&message)?;
             Err(::err::Error::Jni(message))
         } else {
@@ -271,13 +376,24 @@ impl JniEnv {
         }
     }
 
-    pub fn call_static_object_method(&mut self, class: ::jvmti::jclass, method_id: ::jvmti::jmethodID) -> Result<::jvmti::jobject, ::err::Error> {
+    pub fn call_static_object_method(
+        &mut self,
+        class: ::jvmti::jclass,
+        method_id: ::jvmti::jmethodID,
+    ) -> Result<::jvmti::jobject, ::err::Error> {
         let object;
         unsafe {
-            object = (**self.jni).CallStaticObjectMethod.expect("CallStaticObjectMethod function not found")(self.jni, class, method_id);
+            object = (**self.jni)
+                .CallStaticObjectMethod
+                .expect("CallStaticObjectMethod function not found")(
+                self.jni, class, method_id
+            );
         }
-        if self.exception_occurred() || object == ptr::null_mut() {
-            let message = format!("call to method_id {:?} on class {:?} failed", method_id, class);
+        if self.exception_occurred() || object.is_null() {
+            let message = format!(
+                "call to method_id {:?} on class {:?} failed",
+                method_id, class
+            );
             self.diagnose_exception(&message)?;
             Err(::err::Error::Jni(message))
         } else {
@@ -285,14 +401,26 @@ impl JniEnv {
         }
     }
 
-    pub fn call_static_object_method_with_jclass(&mut self, class: ::jvmti::jclass, method_id: ::jvmti::jmethodID, c: ::jvmti::jclass) -> Result<::jvmti::jobject, ::err::Error> {
-        let c_value: ::jvmti::jvalue = ::jvmti::jvalue {l: c};
+    pub fn call_static_object_method_with_jclass(
+        &mut self,
+        class: ::jvmti::jclass,
+        method_id: ::jvmti::jmethodID,
+        c: ::jvmti::jclass,
+    ) -> Result<::jvmti::jobject, ::err::Error> {
+        let c_value: ::jvmti::jvalue = ::jvmti::jvalue { l: c };
         let object;
         unsafe {
-            object = (**self.jni).CallStaticObjectMethodA.expect("CallStaticObjectMethodA function not found")(self.jni, class, method_id, &c_value);
+            object = (**self.jni)
+                .CallStaticObjectMethodA
+                .expect("CallStaticObjectMethodA function not found")(
+                self.jni, class, method_id, &c_value,
+            );
         }
-        if self.exception_occurred() || object == ptr::null_mut() {
-            let message = format!("call to method_id {:?} on class {:?} with variable argument {:?} failed", method_id, class, c);
+        if self.exception_occurred() || object.is_null() {
+            let message = format!(
+                "call to method_id {:?} on class {:?} with variable argument {:?} failed",
+                method_id, class, c
+            );
             self.diagnose_exception(&message)?;
             Err(::err::Error::Jni(message))
         } else {
@@ -300,39 +428,63 @@ impl JniEnv {
         }
     }
 
-    pub fn diagnose_exception(&mut self, message: &String) -> Result<(), ::err::Error> {
+    pub fn diagnose_exception(&mut self, message: &str) -> Result<(), ::err::Error> {
         if !self.exception_occurred() {
             return Ok(());
         }
         let exc;
         unsafe {
-            exc = (**self.jni).ExceptionOccurred.expect("ExceptionOccurred function not found")(self.jni);
+            exc = (**self.jni)
+                .ExceptionOccurred
+                .expect("ExceptionOccurred function not found")(self.jni);
         }
-        let exc_class = self.get_object_class_internal(exc).expect("exception class not found");
-        let get_message_method_id = self.get_method_id_internal(exc_class, "getMessage", "()Ljava/lang/String;").expect("exception getMessage method not found");
-        let exc_message = self.call_object_method_internal(exc, get_message_method_id).expect("Failed to get exception message") as ::jvmti::jstring;
+        let exc_class = self
+            .get_object_class_internal(exc)
+            .expect("exception class not found");
+        let get_message_method_id = self
+            .get_method_id_internal(exc_class, "getMessage", "()Ljava/lang/String;")
+            .expect("exception getMessage method not found");
+        let exc_message =
+            self.call_object_method_internal(exc, get_message_method_id)
+                .expect("Failed to get exception message") as ::jvmti::jstring;
 
         let (exc_message_utf_chars, exc_message_cstr) = self.get_string_utf_chars(exc_message);
-        let err = Err(::err::Error::Jni(format!("{}: {}", message.clone(), exc_message_cstr.to_string_lossy().into_owned())));
+        let err = Err(::err::Error::Jni(format!(
+            "{}: {}",
+            message,
+            exc_message_cstr.to_string_lossy().into_owned()
+        )));
         self.release_string_utf_chars(exc_message, exc_message_utf_chars);
         unsafe {
-            (**self.jni).ExceptionClear.expect("ExceptionClear function not found")(self.jni);
+            (**self.jni)
+                .ExceptionClear
+                .expect("ExceptionClear function not found")(self.jni);
         }
         err
     }
 
     fn exception_occurred(&mut self) -> bool {
         unsafe {
-            (**self.jni).ExceptionCheck.expect("ExceptionCheck function not found")(self.jni) == ::jvmti::JNI_TRUE as u8
+            (**self.jni)
+                .ExceptionCheck
+                .expect("ExceptionCheck function not found")(self.jni)
+                == ::jvmti::JNI_TRUE as u8
         }
     }
 
     pub fn find_class(&mut self, class_name: &str) -> Result<::jvmti::jclass, ::err::Error> {
+        let class_name_cstr = CString::new(class_name).expect("invalid class name");
         let class;
+
         unsafe {
-            class = (**self.jni).FindClass.expect("FindClass function not found")(self.jni, CString::new(class_name).expect("invalid class name").as_ptr())
+            class = (**self.jni)
+                .FindClass
+                .expect("FindClass function not found")(
+                self.jni, class_name_cstr.as_ptr()
+            )
         }
-        if self.exception_occurred() || class == ptr::null_mut() {
+
+        if self.exception_occurred() || class.is_null() {
             let message = format!("{} class not found", class_name);
             self.diagnose_exception(&message)?;
             Err(::err::Error::Jni(message))
@@ -341,7 +493,12 @@ impl JniEnv {
         }
     }
 
-    pub fn get_method_id(&mut self, class: ::jvmti::jclass, method: &str, signature: &str) -> Result<::jvmti::jmethodID, ::err::Error> {
+    pub fn get_method_id(
+        &mut self,
+        class: ::jvmti::jclass,
+        method: &str,
+        signature: &str,
+    ) -> Result<::jvmti::jmethodID, ::err::Error> {
         let method_id = self.get_method_id_internal(class, method, signature);
         if self.exception_occurred() || method_id == None {
             let message = format!("{} method with signature {} not found", method, signature);
@@ -352,19 +509,36 @@ impl JniEnv {
         Ok(method_id.expect("unexpected error"))
     }
 
-    fn get_method_id_internal(&mut self, class: ::jvmti::jclass, method: &str, signature: &str) -> Option<::jvmti::jmethodID> {
+    fn get_method_id_internal(
+        &mut self,
+        class: ::jvmti::jclass,
+        method: &str,
+        signature: &str,
+    ) -> Option<::jvmti::jmethodID> {
+        let method_name = CString::new(method).expect("invalid method name");
+        let sig_name = CString::new(signature).expect("invalid method signature");
         let method_id;
         unsafe {
-            method_id = (**self.jni).GetMethodID.expect("GetMethodID function not found")(self.jni, class, CString::new(method).expect("invalid method name").as_ptr(), CString::new(signature).expect("invalid method signature").as_ptr());
+            method_id = (**self.jni)
+                .GetMethodID
+                .expect("GetMethodID function not found")(
+                self.jni,
+                class,
+                method_name.as_ptr(),
+                sig_name.as_ptr(),
+            );
         }
-        if method_id == ptr::null_mut() {
+        if method_id.is_null() {
             None
         } else {
             Some(method_id)
         }
     }
 
-    pub fn get_object_class(&mut self, object: ::jvmti::jobject) -> Result<::jvmti::jclass, ::err::Error> {
+    pub fn get_object_class(
+        &mut self,
+        object: ::jvmti::jobject,
+    ) -> Result<::jvmti::jclass, ::err::Error> {
         let class = self.get_object_class_internal(object);
         if self.exception_occurred() || class == None {
             let message = format!("class for object {:?} not found", object);
@@ -378,22 +552,42 @@ impl JniEnv {
     fn get_object_class_internal(&mut self, object: ::jvmti::jobject) -> Option<::jvmti::jclass> {
         let class;
         unsafe {
-            class = (**self.jni).GetObjectClass.expect("GetObjectClass function not found")(self.jni, object)
+            class = (**self.jni)
+                .GetObjectClass
+                .expect("GetObjectClass function not found")(self.jni, object)
         }
-        if class == ptr::null_mut() {
+        if class.is_null() {
             None
         } else {
             Some(class)
         }
     }
 
-    pub fn get_static_method_id(&mut self, class: ::jvmti::jclass, method: &str, signature: &str) -> Result<::jvmti::jmethodID, ::err::Error> {
+    pub fn get_static_method_id(
+        &mut self,
+        class: ::jvmti::jclass,
+        method: &str,
+        signature: &str,
+    ) -> Result<::jvmti::jmethodID, ::err::Error> {
         let method_id;
+        let method_name = CString::new(method).expect("invalid method name");
+        let sig_name = CString::new(signature).expect("invalid method signature");
         unsafe {
-            method_id = (**self.jni).GetStaticMethodID.expect("GetStaticMethodID function not found")(self.jni, class, CString::new(method).expect("invalid method name").as_ptr(), CString::new(signature).expect("invalid method signature").as_ptr());
+            method_id = (**self.jni)
+                .GetStaticMethodID
+                .expect("GetStaticMethodID function not found")(
+                self.jni,
+                class,
+                method_name.as_ptr(),
+                sig_name.as_ptr(),
+            );
         }
-        if self.exception_occurred() || method_id == ptr::null_mut() {
-            let message = format!("{} static method with signature {} not found", method, signature);
+
+        if self.exception_occurred() || method_id.is_null() {
+            let message = format!(
+                "{} static method with signature {} not found",
+                method, signature
+            );
             self.diagnose_exception(&message)?;
             Err(::err::Error::Jni(message))
         } else {
@@ -401,20 +595,35 @@ impl JniEnv {
         }
     }
 
-    pub fn get_string_utf_chars<'a>(&mut self, s: ::jvmti::jstring) -> (*const ::std::os::raw::c_char, &'a CStr) {
+    pub fn get_string_utf_chars<'a>(
+        &mut self,
+        s: ::jvmti::jstring,
+    ) -> (*const ::std::os::raw::c_char, &'a CStr) {
         let utf_chars;
         let cstr;
         unsafe {
-            utf_chars = (**self.jni).GetStringUTFChars.expect("GetStringUTFChars function not found")(self.jni, s, ptr::null_mut());
+            utf_chars = (**self.jni)
+                .GetStringUTFChars
+                .expect("GetStringUTFChars function not found")(
+                self.jni, s, ptr::null_mut()
+            );
             cstr = CStr::from_ptr(utf_chars);
         }
 
         (utf_chars, cstr)
     }
 
-    pub fn release_string_utf_chars(&mut self, s: ::jvmti::jstring, utf_chars: *const ::std::os::raw::c_char) {
+    pub fn release_string_utf_chars(
+        &mut self,
+        s: ::jvmti::jstring,
+        utf_chars: *const ::std::os::raw::c_char,
+    ) {
         unsafe {
-            (**self.jni).ReleaseStringUTFChars.expect("ReleaseStringUTFChars function not found")(self.jni, s, utf_chars);
+            (**self.jni)
+                .ReleaseStringUTFChars
+                .expect("ReleaseStringUTFChars function not found")(
+                self.jni, s, utf_chars
+            );
         }
     }
 }
