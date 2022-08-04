@@ -1,6 +1,6 @@
 ARG proxy=
 ARG base_image=library/ubuntu:bionic
-FROM ${proxy}${base_image}
+FROM ${base_image}
 
 RUN apt-get update && apt-get install -y \
     build-essential \
