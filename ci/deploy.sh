@@ -10,6 +10,10 @@ PATH=/usr/local/bin:$PATH
 /usr/local/bin/cargo --version
 
 cd jvmkill
+
+VERSION=$(cargo metadata --format-version=1 --no-deps | jq '.workspace_members[] | select(. | startswith("jvmkill "))' | cut -d ' ' -f 2)
+echo "Building version $VERSION"
+
 /usr/local/bin/cargo build --color=always --release -p jvmkill
 
 JFROG_CLI_OFFER_CONFIG=false /usr/local/bin/jfrog rt upload \
