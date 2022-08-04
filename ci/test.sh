@@ -9,5 +9,7 @@ PATH=/usr/local/bin:$PATH
 
 /usr/local/bin/cargo --version
 
+export CARGO_UNSTABLE_SPARSE_REGISTRY=true
+
 cd jvmkill
 /usr/local/bin/cargo test --color=always --all -- --test-threads=1 --nocapture
