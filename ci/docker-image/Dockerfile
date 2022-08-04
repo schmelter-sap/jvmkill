@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
 
 ENV JAVA_HOME="/usr/lib/jvm/jdk"
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
-COPY --from=bellsoft/liberica-openjdk-debian:8 $JAVA_HOME $JAVA_HOME
+COPY --from=${proxy}bellsoft/liberica-openjdk-debian:8 $JAVA_HOME $JAVA_HOME
 
 ENV CARGO_HOME  /usr/local
 ENV RUSTUP_HOME /usr/local
