@@ -9,6 +9,8 @@ PATH=/usr/local/bin:$PATH
 
 /usr/local/bin/cargo --version
 
+export CARGO_UNSTABLE_SPARSE_REGISTRY=true
+
 cd jvmkill
 
 VERSION=$(cargo metadata --format-version=1 --no-deps | jq '.workspace_members[] | select(. | startswith("jvmkill "))' | cut -d ' ' -f 2 |  sed 's|-|.|')
