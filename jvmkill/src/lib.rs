@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 the original author or authors.
+ * Copyright (c) 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,24 +18,24 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-use std::sync::Mutex;
 use std::io::{stderr, Stderr};
+use std::sync::Mutex;
 
 #[macro_use]
 mod macros;
+mod agentcontroller;
 mod env;
 mod err;
 mod heap;
 mod jvmti;
-mod agentcontroller;
 
-use env::JvmTI;
-use agentcontroller::MutAction;
+use crate::agentcontroller::MutAction;
+use crate::env::JvmTI;
 
 #[macro_use]
 extern crate lazy_static;
+extern crate chrono;
 extern crate libc;
-extern crate time;
 
 lazy_static! {
     static ref STATIC_CONTEXT: Mutex<AgentContext<'static>> = Mutex::new(AgentContext::new());
@@ -43,7 +43,7 @@ lazy_static! {
 
 #[derive(Default)]
 struct AgentContext<'a> {
-    ac: Option<agentcontroller::controller::AgentController<'a, Stderr>>
+    ac: Option<agentcontroller::controller::AgentController<'a, Stderr>>,
 }
 
 impl<'a> AgentContext<'a> {
@@ -55,33 +55,47 @@ impl<'a> AgentContext<'a> {
         self.ac = Some(a);
     }
 
-    pub fn on_oom(&mut self, jni_env: ::env::JniEnv, resource_exhaustion_flags: ::jvmti::jint) {
-        self.ac.as_mut().map(|a| a.on_oom(jni_env, resource_exhaustion_flags));
+    pub fn on_oom(&mut self, jni_env: crate::env::JniEnv, resource_exhaustion_flags: crate::jvmti::jint) {
+        if let Some(a) = self.ac.as_mut() {
+            a.on_oom(jni_env, resource_exhaustion_flags)
+        }
     }
 }
 
 #[no_mangle]
 #[allow(unused_variables)]
-pub extern fn Agent_OnLoad(vm: *mut jvmti::JavaVM, options: *mut ::std::os::raw::c_char,
-                           reserved: *mut ::std::os::raw::c_void) -> jvmti::jint {
+pub extern "C" fn Agent_OnLoad(
+    vm: *mut jvmti::JavaVM,
+    options: *mut ::std::os::raw::c_char,
+    reserved: *mut ::std::os::raw::c_void,
+) -> jvmti::jint {
     let jvmti_env = env::JvmTiEnv::new(vm);
 
     if let Err(e) = jvmti_env
         .and_then(|ti| agentcontroller::controller::AgentController::new(ti, options, stderr()))
-        .map(|ac| STATIC_CONTEXT.lock().expect("static lock was not acquired").set(ac)) {
+        .map(|ac| {
+            STATIC_CONTEXT
+                .lock()
+                .expect("static lock was not acquired")
+                .set(ac)
+        })
+    {
         return e;
     }
 
-    if let Err(e) = jvmti_env
-        .and_then(|mut ti| {
-            ti.on_resource_exhausted(resource_exhausted).map_err(|err| err.rc())
-        }) {
+    if let Err(e) = jvmti_env.and_then(|mut ti| {
+        ti.on_resource_exhausted(resource_exhausted)
+            .map_err(|err| err.rc())
+    }) {
         return e;
     }
 
     0
 }
 
-fn resource_exhausted(_: env::JvmTiEnv, jni_env: env::JniEnv, flags: ::jvmti::jint) {
-    STATIC_CONTEXT.lock().expect("static lock was not acquired").on_oom(jni_env, flags);
+fn resource_exhausted(_: env::JvmTiEnv, jni_env: env::JniEnv, flags: crate::jvmti::jint) {
+    STATIC_CONTEXT
+        .lock()
+        .expect("static lock was not acquired")
+        .on_oom(jni_env, flags);
 }

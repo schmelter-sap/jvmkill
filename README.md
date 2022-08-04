@@ -1,5 +1,3 @@
-[Concourse Pipeline](https://java-experience.ci.springapps.io/pipelines/jvmkill)
-
 # Overview
 
 **jvmkill** is a simple [JVMTI][] agent that forcibly terminates the JVM
@@ -21,58 +19,59 @@ command and that system call can fail for large JVMs due to memory
 overcommit limits in the operating system.  This is the problem that
 motivated the development of this agent.
 
-# Pre-requisites
+## Pre-requisites
 
-Install [Rust][] v1.19.0 or later.
+1. Install [Rust][] v1.60.0 or later. Earlier version may work too, but it's best to use at least this verison.
 
-Ensure that you have libclang v3.9 or later installed. To install this on Ubuntu Trusty see [ask ubuntu][]
-and set `$LIBCLANG_PATH` to the directory containing (v3.9 or later of) `libclang.so` and `libclang.so.1`.
+2. Ensure that you have a recent version of libclang installed. To install this on Ubuntu see run `apt install clang`.
+
+3. Install Java 1.8+.
 
 [Rust]: https://www.rust-lang.org/en-US/install.html
-[ask ubuntu]: https://askubuntu.com/questions/787383/how-to-install-llvm-3-9
-    
-# Building
+
+## Building
 
 To build the agent, install the above pre-requisites, then issue:
 
-    cargo build --release -p jvmkill
-    
-If the build fails, update the dependencies as follows then try again:
+```bash
+cargo build --release -p jvmkill
+```
 
-    cargo update
-    
-# Testing
+## Testing
 
 To run the tests, install the above pre-requisites, then issue:
 
-    cargo test --all
-    
-# Usage
+```bash
+cargo test --all
+```
+
+## Usage
 
 Run Java with the agent added as a JVM argument:
 
-    -agentpath:/path/to/libjvmkill.so=<parameters>
+```text
+-agentpath:/path/to/libjvmkill.so=<parameters>
+```
 
 Alternatively, if modifying the Java command line is not possible, the
 above may be added to the `JAVA_TOOL_OPTIONS` environment variable.
 
-# Agent parameters
+## Agent parameters
 
 The agent configurations can be passed using the standard agent mechanism.
 The parameters should be passed as a comma separated string. Eg.: count=2,time=10
 The agent accepts the following parameters:
 
-## count
+### count
 
 Configures the limit of resourceExhausted events that can be fired in the configured
 time interval. Defaults to 0 if not provided (JVM is killed with a single fired event).
 
-## time
+### time
 
-Configures the time limit (in seconds) in which resourceExhausted events are kept in 
-the counter. Defaults to 1 if not provided.
+Configures the time limit (in seconds) in which resourceExhausted events are kept in the counter. Defaults to 1 if not provided.
 
-## heapDumpPath
+### heapDumpPath
 
 Configures a file to which a heap dump is written before the agent kills the JVM.
 
@@ -85,15 +84,13 @@ although the precise set of format codes supported depends on the platform.
 For example, the string "%a-%d-%b-%Y-%T-%z" approximates the date format of RFC 2822 while avoiding embedded spaces
 (which are awkward in agent parameters).
 
-A heap dump (of live objects only) is generated if a path is specified _and_ the 
-[HotSpot Diagnostic MXBean](https://docs.oracle.com/javase/8/docs/jre/api/management/extension/com/sun/management/HotSpotDiagnosticMXBean.html)
-is available.
-If the parent directories of the path do not exist, they are created.
+A heap dump (of live objects only) is generated if a path is specified _and_ the [HotSpot Diagnostic MXBean](https://docs.oracle.com/javase/8/docs/jre/api/management/extension/com/sun/management/HotSpotDiagnosticMXBean.html)
+is available. If the parent directories of the path do not exist, they are created.
 
 If the file exists before the heap dump is produced, it is overwritten. Including the date and time
 in the file path, using strftime format codes, may reduce the risk that the file already exists.
 
-## printHeapHistogram
+### printHeapHistogram
 
 Determines whether or not a histogram of heap usage is printed before the agent kills the JVM.
 To enable histogram printing, set the parameter to 1. Defaults to 0 (disabled) if not provided.
@@ -104,13 +101,13 @@ total number of bytes in the heap consumed by those instances, and the name of t
 The histogram is sorted in order of decreasing total number of bytes.
 
 The histogram may be truncated. To set the number of entries that appear, use the `heapHistogramMaxEntries` parameter.
- 
-## heapHistogramMaxEntries
+
+### heapHistogramMaxEntries
 
 When histogram printing is enabled, limits the number of entries in the histogram to the value
 of the parameter. Defaults to 100 if not provided. Set the parameter to 0 to print the entire histogram.
 
-## printMemoryUsage
+### printMemoryUsage
 
 Determines whether or not memory usage is printed before the agent kills the JVM.
 To disable memory usage printing, set the parameter to 0. Defaults to 1 (enabled) if not provided.

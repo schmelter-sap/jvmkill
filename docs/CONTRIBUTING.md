@@ -1,13 +1,17 @@
+# Contributing
+
 _Have something you’d like to contribute to jvmkill? We welcome pull requests, but ask that you carefully read this document first to understand how best to submit them; what kind of changes are likely to be accepted; and what to expect from the Cloud Foundry Java Experience team when evaluating your submission._
 
 _Please refer back to this document as a checklist before issuing any pull request; this will save time for everyone!_
 
 ## Understanding the basics
+
 Not sure what a pull request is, or how to submit one?  Take a look at GitHub's excellent [help documentation][] first.
 
 [help documentation]: http://help.github.com/send-pull-requests
 
 ## Search GitHub Issues first; create an issue if necessary
+
 Is there already an issue that addresses your concern?  Do a bit of searching in our [GitHub issue tracker][] to see if you can find something similar. If not, please create a new issue before submitting a pull request unless the change is truly trivial, e.g. typo fixes, removing compiler warnings, etc.
 
 [GitHub issue tracker]: https://github.com/cloudfoundry/jvmkill/issues
@@ -19,14 +23,17 @@ If you're considering anything more than correcting a typo or fixing a minor bug
 [vcap-dev]: https://groups.google.com/a/cloudfoundry.org/forum/#!forum/vcap-dev
 
 ## Sign the Contributor License Agreement
+
 Please open an issue in the [GitHub issue tracker][] to receive instructions on how to fill out the Contributor License Agreement.
 
 ## Use short branch names
+
 Branches used when submitting pull requests should preferably using succinct, lower-case, dash (-) delimited names, such as 'fix-warnings', 'fix-typo', etc. In [fork-and-edit][] cases, the GitHub default 'patch-1' is fine as well. This is important, because branch names show up in the merge commits that result from accepting pull requests, and should be as expressive and concise as possible.
 
 [fork-and-edit]: https://github.com/blog/844-forking-with-the-edit-button
 
 ## Mind the whitespace
+
 Please carefully follow the whitespace and formatting conventions already present in the code.
 
 1. Tabs, not spaces
@@ -38,6 +45,7 @@ Please carefully follow the whitespace and formatting conventions already presen
 1. Latin-1 (ISO-8859-1) encoding for sources; use `native2ascii` to convert if necessary
 
 ## Add Apache license header to all new files
+
 ```C
 /*
  * Copyright (c) 2017 the original author or authors.
@@ -55,7 +63,9 @@ Please carefully follow the whitespace and formatting conventions already presen
  * limitations under the License.
  */
 ```
+
 ## Update Apache license header to modified files as necessary
+
 Always check the date range in the license header. For example, if you've modified a file in 2017 whose header still reads
 
 ```C
@@ -69,12 +79,15 @@ then be sure to update it to 2015 appropriately
 ```
 
 ## Submit test cases for all behavior changes
+
 Search the codebase to find related unit and other tests and add additional tests within.
 
 ## Squash commits
+
 Use `git rebase --interactive`, `git add --patch` and other tools to "squash"multiple commits into atomic changes. In addition to the man pages for git, there are many resources online to help you understand how these tools work. Here is one: <http://book.git-scm.com/4_interactive_rebasing.html>.
 
 ## Use real name in git commits
+
 Please configure git to use your real first and last name for any commits you intend to submit as pull requests. For example, this is not acceptable:
 
 ```plain
@@ -105,6 +118,7 @@ git config user.email user@mail.com
 ```
 
 ## Format commit messages
+
 Please read and follow the [commit guidelines section of Pro Git][].
 
 Most importantly, please format your commit messages in the following way (adapted from the commit template in the link above):
@@ -140,11 +154,13 @@ Issue: #10, #11
 [commit guidelines section of Pro Git]: http://progit.org/book/ch5-2.html#commit_guidelines
 
 ## Run all tests prior to submission
+
 See the [Building][] section of the README for instructions. Make sure that all tests pass prior to submitting your pull request.
 
 [Building]: ../README.md#Building
 
-# Submit your pull request
+## Submit your pull request
+
 Subject line:
 
 Follow the same conventions for pull request subject lines as mentioned above for commit message subject lines.
@@ -158,6 +174,7 @@ In the body:
 Note that for pull requests containing a single commit, GitHub will default the subject line and body of the pull request to match the subject line and body of the commit message. This is fine, but please also include the items above in the body of the request.
 
 ## Expect discussion and rework
+
 The Cloud Foundry Java Experience team takes a very conservative approach to accepting contributions to jvmkill. This is to keep code quality and stability as high as possible, and to keep complexity at a minimum. Your changes, if accepted, may be heavily modified prior to merging. You will retain "Author:" attribution for your Git commits granted that the bulk of your changes remain intact. You may be asked to rework the submission for style (as explained above) and/or substance. Again, we strongly recommend discussing any serious submissions with the Cloud Foundry Java Experience team _prior_ to engaging in serious development work.
 
 Note that you can always force push (`git push -f`) reworked / rebased commits against the branch used to submit your pull request. i.e. you do not need to issue a new pull request when asked to make changes.

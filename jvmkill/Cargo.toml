@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2018 the original author or authors.
+# Copyright (c) 2015-2022 the original author or authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,8 +14,12 @@
 
 [package]
 name = "jvmkill"
-version = "2.0.0-BUILD-SNAPSHOT"
-authors = [ "Glyn Normington <gnormington@pivotal.io>", "Ben Hale <bhale@pivotal.io>" ]
+version = "1.17.0-BUILD-SNAPSHOT"
+edition = "2021"
+authors = [
+    "Glyn Normington <gnormington@pivotal.io>",
+    "Ben Hale <bhale@pivotal.io>",
+    "Daniel Mikusa <dmikusa@vmware.com>"]
 description = "JVM resource exhaustion agent"
 license = "Apache-2.0"
 keywords = [ "java", "jvm", "jvmti" ]
@@ -25,12 +29,12 @@ build = "build.rs"
 crate_type = [ "cdylib" ]
 
 [dependencies]
-libc = "*"
-time = "*"
-lazy_static = "*"
+libc = "0.2"
+chrono = "0.4"
+lazy_static = "1.4"
 
 [dev-dependencies]
-nix = "*"
+nix = "0.24"
 
 [build-dependencies]
-bindgen = "*"
+bindgen = "0.59"

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,46 @@
 
 package org.cloudfoundry.jvmkill;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public final class ThreadExhaustion {
 
     @SuppressWarnings("InfiniteLoopStatement")
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+        // this does not equate to the exact number of threads that can be created
+        // but does help to limit them. In testing a value of 400 allowed about 60 threads to be created
+        // in the loop below.
+        set_proc_limit(400);
+
+        List<Thread> threads = new ArrayList<>();
+
         System.out.println("Exhausting threads");
 
-        for (; ; ) {
+        for (int i = 0; i < 1000; i++) {
             try {
-                new Sleeper().start();
+                Thread t = new Sleeper();
+                threads.add(t);
+                t.start();
                 System.out.print(".");
+                System.out.println("\nThreads:" + threads.size());
             } catch (Throwable t) {
-                // suppress
+                System.err.println(t);
             }
         }
+
+        for (Thread thread : threads) {
+            thread.interrupt();
+            thread.join();
+        }
+        System.exit(255);
+    }
+
+    // set the NPROC limit to a smaller value (same as using `ulimit -u`
+    // This can on some systems help to trigger a resource exhaustion without actually exhausting all the resources
+    private static void set_proc_limit(int new_limit) {
+        Limiter limiter = LimiterFactory.getInstance();
+        limiter.setrlimit(Limiter.RLIMIT_NPROC, new RLimits(new_limit, new_limit));
     }
 
 }
