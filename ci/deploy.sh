@@ -12,6 +12,10 @@ PATH=/usr/local/bin:$PATH
 cd jvmkill
 
 VERSION=$(cargo metadata --format-version=1 --no-deps | jq '.workspace_members[] | select(. | startswith("jvmkill "))' | cut -d ' ' -f 2)
+if [ -z "${VERSION:-}" ] || [ -z "${PLATFORM:-}" ]; then
+  echo "Version [${VERSION:-}] or Platform [${PLATFORM:-}] is empty, but required"
+  exit 255
+fi
 echo "Building version $VERSION"
 
 /usr/local/bin/cargo build --color=always --release -p jvmkill

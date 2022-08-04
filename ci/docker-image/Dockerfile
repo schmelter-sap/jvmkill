@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y \
     clang \
     curl \
     ca-certificates \
+    jq \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
