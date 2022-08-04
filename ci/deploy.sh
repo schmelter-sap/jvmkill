@@ -11,7 +11,7 @@ PATH=/usr/local/bin:$PATH
 
 cd jvmkill
 
-VERSION=$(cargo metadata --format-version=1 --no-deps | jq '.workspace_members[] | select(. | startswith("jvmkill "))' | cut -d ' ' -f 2)
+VERSION=$(cargo metadata --format-version=1 --no-deps | jq '.workspace_members[] | select(. | startswith("jvmkill "))' | cut -d ' ' -f 2 |  sed 's|-|.|')
 if [ -z "${VERSION:-}" ] || [ -z "${PLATFORM:-}" ]; then
   echo "Version [${VERSION:-}] or Platform [${PLATFORM:-}] is empty, but required"
   exit 255
