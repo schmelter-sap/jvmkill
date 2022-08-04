@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-use std::env;
-use std::path::PathBuf;
+use std::{env, fs};
+use std::path::{PathBuf};
 use std::process::Command;
 
 pub fn run_java(
@@ -31,7 +31,7 @@ pub fn run_java(
             arguments
         ))
         .arg("-cp")
-        .arg(jvmkill_test().to_str().unwrap())
+        .arg(jvmkill_classpath())
         .arg("-Xmx50m")
         .arg("-XX:ReservedCodeCacheSize=10m")
         .arg("-XX:-UseCompressedOops")
@@ -67,14 +67,39 @@ fn java() -> PathBuf {
         .join("java")
 }
 
-fn jvmkill_test() -> PathBuf {
+fn jvmkill_test_dir() -> PathBuf {
     env::current_dir()
         .unwrap()
         .parent()
         .unwrap()
         .join("resource-exhaustion-generator")
+}
+
+fn jvmkill_test() -> PathBuf {
+    jvmkill_test_dir()
         .join("target")
         .join("resource-exhaustion-generator-0.0.0.jar")
+}
+
+fn jvmkill_app_dependencies_dir() -> PathBuf {
+    jvmkill_test_dir()
+        .join("target")
+        .join("dependencies")
+}
+
+fn jvmkill_app_dependencies_list() -> Vec<PathBuf> {
+    fs::read_dir(jvmkill_app_dependencies_dir()).expect("unable to read directory")
+        .map(|p| p.expect("unable to read directory").path()).collect()
+}
+
+fn jvmkill_classpath() -> String {
+    let mut deps = jvmkill_app_dependencies_list();
+    deps.push(jvmkill_test());
+
+    deps.iter()
+        .map(|p| p.to_str().expect("unable to convert to string"))
+        .collect::<Vec<&str>>()
+        .join(":")
 }
 
 fn jvmkill() -> PathBuf {
@@ -90,5 +115,6 @@ fn jvmkill() -> PathBuf {
         .expect("must have parent")
         .join("target")
         .join("debug")
+        .join("deps")
         .join(lib_name)
 }
