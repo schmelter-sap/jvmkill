@@ -1,4 +1,4 @@
-ARG base_image=openjdk:8-jre
+ARG base_image=ubuntu:bionic
 FROM ${base_image}
 
 RUN apt-get update && apt-get install -y \
@@ -9,6 +9,10 @@ RUN apt-get update && apt-get install -y \
     jq \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
+
+ENV JAVA_HOME="/usr/lib/jvm/jdk"
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
+COPY --from=bellsoft/liberica-openjdk-debian:8 $JAVA_HOME $JAVA_HOME
 
 ENV CARGO_HOME  /usr/local
 ENV RUSTUP_HOME /usr/local
