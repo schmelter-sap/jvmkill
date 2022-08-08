@@ -14,7 +14,7 @@
 
 [package]
 name = "jvmkill"
-version = "1.17.0-BUILD-SNAPSHOT"
+version = "1.18.0-BUILD-SNAPSHOT"
 edition = "2021"
 authors = [
     "Glyn Normington <gnormington@pivotal.io>",
