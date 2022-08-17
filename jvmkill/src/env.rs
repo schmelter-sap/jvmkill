@@ -343,14 +343,13 @@ impl JniEnv {
     }
 
     // Rust doesn't have variadic functions (except for unsafe FFI bindings).
-    pub fn call_object_method_with_cstring_jboolean(
+    pub fn call_void_method_with_cstring_jboolean(
         &mut self,
         object: crate::jvmti::jobject,
         method_id: crate::jvmti::jmethodID,
         s: CString,
         b: crate::jvmti::jboolean,
-    ) -> Result<crate::jvmti::jobject, crate::err::Error> {
-        let result;
+    ) -> Result<(), crate::err::Error> {
         unsafe {
             let s_jstring =
                 (**self.jni)
@@ -358,13 +357,13 @@ impl JniEnv {
                     .expect("NewStringUTF function not found")(self.jni, s.as_ptr());
             let args: [crate::jvmti::jvalue; 2] =
                 [crate::jvmti::jvalue { l: s_jstring }, crate::jvmti::jvalue { z: b }];
-            result = (**self.jni)
-                .CallObjectMethodA
-                .expect("CallObjectMethodA function not found")(
+            (**self.jni)
+                .CallVoidMethodA
+                .expect("CallVoidMethodA function not found")(
                 self.jni, object, method_id, &args[0],
             );
         }
-        if self.exception_occurred() || result.is_null() {
+        if self.exception_occurred() {
             let message = format!(
                 "call to method_id {:?} on object {:?} with variable arguments {:?}, {} failed",
                 method_id, object, s, b
@@ -372,7 +371,7 @@ impl JniEnv {
             self.diagnose_exception(&message)?;
             Err(crate::err::Error::Jni(message))
         } else {
-            Ok(result)
+            Ok(())
         }
     }
 

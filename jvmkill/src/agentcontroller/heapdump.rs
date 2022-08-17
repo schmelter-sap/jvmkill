@@ -98,7 +98,7 @@ impl super::Action for HeapDump {
                 )
             })?;
 
-            jni_env.call_object_method_with_cstring_jboolean(
+            jni_env.call_void_method_with_cstring_jboolean(
                 hotspot_diagnostic_mxbean,
                 dump_heap_method_id,
                 resolved_heap_dump_path_cstring.clone(),
